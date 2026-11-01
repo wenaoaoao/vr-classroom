@@ -9,6 +9,7 @@ for k in R:  # 平滑寬度並補償像素取樣 (+1px)
         wgt=np.clip(np.minimum(u,1-u)/0.15,0,1)          # 兩端 15% 逐漸回到實測值（與手掌、頂端切口對齊）
         if k=='xiang': wgt=np.where(u<.3,0,wgt)        # 巷肩膀段保留沿空洞邊緣的實測值
         R[k][key]=[round(float(v)+add_,2) for v in raw*(1-wgt)+sm*wgt]
+R['ban']['straight']=1
 R['ban']['bendK']=float(__import__('os').environ.get('BENDK',3.5)); R['xiang']['bendK']=1.0
 R['ban']['wEnd']=float(__import__('os').environ.get('WEND',1)); R['xiang']['wEnd']=float(__import__('os').environ.get('WENDX',1.5))
 for _k in R:
@@ -93,6 +94,10 @@ function armPath(r,A,t0,P,ang,ext,extW,k0min=0,hs=1,pre=0){
   const bend=Math.abs(ang-angOf(r.t1)), k1e=(r.k[1]+(r.bendK||0)*bend)*s;
   const k0=Math.min(Math.max(r.k[0]*s,k0min),kcap);
   let ctrl=[A,[A[0]+t0[0]*k0,A[1]+t0[1]*k0],[P[0]-t1[0]*Math.min(k1e,kcap),P[1]-t1[1]*Math.min(k1e,kcap)],P];
+  if(r.straight){ // 伴：撇保持筆直，彎曲只集中在手腕前一小段
+    const Ls=Math.hypot(P[0]-A[0],P[1]-A[1]);
+    ctrl=[A,[A[0]+t0[0]*Ls*.62,A[1]+t0[1]*Ls*.62],[P[0]-t1[0]*Ls*.2,P[1]-t1[1]*Ls*.2],P];
+  }
   if(pre>0){ // 曲線從肩膀後方 pre 處開始（藏在屋頂內），露出的部分永遠是單純的 C 形
     const A0=[A[0]-t0[0]*pre,A[1]-t0[1]*pre], Lp=Math.hypot(P[0]-A0[0],P[1]-A0[1]);
     // 二次曲線等效：兩個控制點都指向起點切線與終點切線的交點 X，曲線不可能有反曲點
