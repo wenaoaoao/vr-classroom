@@ -56,7 +56,7 @@ html='''<!DOCTYPE html>
 const RIG=@rig;
 /* ================= 時間軸（秒）=================
    依設計者的三張關鍵姿勢：1 收起 → 2 伸手相握 → 3 鬆開回到標準字 */
-const T={fade:[0,.45], ban:[.45,1.7], xiang:[.7,1.7], hold:[1.7,2.25], release:[2.25,3.1], lamp:1.85, end:4.6};
+const T={fade:[0,.45], release:[2.25,3.0], lamp:1.62, end:4.4};
 const KEY=@keys;   // 由設計稿量出的手腕位置 P 與手掌角度 ang
 /* ---------- 工具 ---------- */
 const lerp=(a,b,t)=>a+(b-a)*t, clamp=t=>Math.max(0,Math.min(1,t));
@@ -94,25 +94,46 @@ function placeHand(el,r,P,ang){
 const rot=(v,a)=>{const c=Math.cos(deg(a)),s=Math.sin(deg(a));return [v[0]*c-v[1]*s,v[0]*s+v[1]*c];};
 const add=(a,b,k=1)=>[a[0]+b[0]*k,a[1]+b[1]*k];
 const smooth=x=>x*x*(3-2*x);
-/* 每隻手在時間 t 的姿態 */
+/* ---------- 每隻手：一條幾何路徑 + 一條速度曲線 ----------
+   伸手：沿路徑（以弧長均分）加速、減速，1.6 秒兩手同時接觸。
+   握住：抵達前 0.1 秒就開始，兩手一起往上帶一下再落回（與抵達重疊，不會停頓）。
+   鬆開：長者先放，青年晚 0.08 秒，結尾帶一點點回彈。 */
+const M={contact:1.6, clasp:[1.5,2.2], up:5, tilt:1.5,
+  ban:{start:.45, ease:cb(.42,0,.28,1), rel:[2.2,2.85]},
+  xiang:{start:.62, ease:cb(.45,0,.25,1), rel:[2.28,2.98]}};
+const easeRel=cb(.35,0,.2,1.06);
+function arcTable(fn){ // 弧長重新取樣，讓 s 均勻對應距離
+  const N=200,pts=[],acc=[0]; for(let i=0;i<=N;i++)pts.push(fn(i/N));
+  for(let i=1;i<=N;i++)acc.push(acc[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+  const L=acc[N]; return s=>{const d=s*L;let i=1;while(i<N&&acc[i]<d)i++;const f=(d-acc[i-1])/((acc[i]-acc[i-1])||1);
+    return [lerp(pts[i-1][0],pts[i][0],f),lerp(pts[i-1][1],pts[i][1],f)];};
+}
+let PATH=null;
+function buildPaths(){
+  const X=RIG.xiang,t0=X.t0,k1=KEY[1],k2=KEY[2],P2=k2.xiang.P;
+  const K1=add(X.A,t0,-88);   // 手指剛好藏在肩膀切線後
+  const a2=deg(k2.xiang.ang);
+  PATH={
+    xiang:arcTable(u=>bez3([K1,add(X.A,t0,38),[P2[0]-Math.cos(a2)*38+6,P2[1]-Math.sin(a2)*38+22],P2],u)),
+    ban:arcTable(u=>[lerp(k1.ban.P[0],k2.ban.P[0],u),lerp(k1.ban.P[1],k2.ban.P[1],u)])
+  };
+}
 function pose(key,t){
-  const r=RIG[key], k1=KEY[1][key], k2=KEY[2][key], aR=angOf(r.t1), t0=r.t0;
-  const g1=easeReach(clamp((t-T[key][0])/(T[key][1]-T[key][0])));          // 1 → 2
-  const g2=easeSoft(clamp((t-T.release[0])/(T.release[1]-T.release[0]))); // 2 → 3
-  let P,ang,lift=0;
+  if(!PATH)buildPaths();
+  const r=RIG[key],m=M[key],k1=KEY[1][key],k2=KEY[2][key],aR=angOf(r.t1);
+  const s=m.ease(clamp((t-m.start)/(M.contact-m.start)));
+  let P=PATH[key](s), ang, lift=0;
   if(key==='xiang'){
-    // 巷：手從肩膀（袖口）裡伸出，沿手臂方向冒出後往上勾
-    const K1=add(r.A,t0,-115), c1=add(r.A,t0,30), c2=add(k2.P,[Math.cos(deg(k2.ang)),Math.sin(deg(k2.ang))],-45);
-    P=bez3([K1,c1,c2,k2.P],g1);
-    ang=lerp(angOf(t0),k2.ang,smooth(clamp((g1-.3)/.7)));
-    lift=lerp(0,KEY.lift,smooth(clamp((g1-.2)/.8)));
-  }else{
-    // 伴：整條撇沿自己的方向從頂端滑出，手腕下彎伸向巷
-    P=[lerp(k1.P[0],k2.P[0],g1),lerp(k1.P[1],k2.P[1],g1)];
-    ang=lerp(k1.ang,k2.ang,g1);
-  }
-  // 2 → 3：鬆開，回到標準字
-  P=[lerp(P[0],r.B[0],g2),lerp(P[1],r.B[1],g2)]; ang=lerp(ang,aR,g2); lift=lerp(lift,0,g2);
+    const aX=angOf(r.t0);
+    ang=lerp(aX,k2.ang,smooth(clamp((s-.35)/.65)));
+    lift=KEY.lift*smooth(clamp((s-.3)/.7));
+  }else ang=lerp(k1.ang,k2.ang,s);
+  // 握住：一起往上帶再落回（起訖速度為 0）
+  const c=clamp((t-M.clasp[0])/(M.clasp[1]-M.clasp[0])), b=(1-Math.cos(2*Math.PI*c))/2;
+  P=[P[0],P[1]-M.up*b]; ang-=M.tilt*b;
+  // 鬆開
+  const g=easeRel(clamp((t-m.rel[0])/(m.rel[1]-m.rel[0])));
+  P=[lerp(P[0],r.B[0],g),lerp(P[1],r.B[1],g)]; ang=lerp(ang,aR,g); lift=lerp(lift,0,g);
   return {P,ang,lift};
 }
 const $=id=>document.getElementById(id);
