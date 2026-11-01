@@ -2,6 +2,8 @@ import numpy as np, sys
 from PIL import Image
 from scipy import ndimage
 S=3
+import json, os
+J=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'cap','joints.json'))) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)),'cap','joints.json')) else None
 def sigma_for(i,fps=30):
     t=i/fps
     return 4.5 if t<2.7 else max(0.0,4.5*(3.0-t)/0.3)      # 鬆開快結束時逐漸停止平滑
@@ -11,8 +13,14 @@ def clean(i):
     sg=sigma_for(i)
     if sg<=0.05 or not M.any(): return F
     band=ndimage.binary_dilation(M,iterations=10)
-    sm=ndimage.gaussian_filter(F.astype(float),sg)>0.5
-    return np.where(band,sm,F)
+    f=F.astype(float); b1=ndimage.gaussian_filter(f,sg); b2=ndimage.gaussian_filter(f,sg*2.4)
+    # 接縫點周圍（半徑約 20 原稿 px）改用較強的平滑，向外平順過渡
+    H,W=F.shape; yy,xx=np.mgrid[0:H,0:W]; wgt=np.zeros((H,W))
+    for k,(R) in (('banWrist',62),('xiangWrist',55),('xiangShoulder',50),('banL',55),('banR',55),('xiangL',45),('xiangR',45)):
+        x,y=J[i][k]; d=np.hypot(xx-x,yy-y); wgt=np.maximum(wgt,np.clip((R*1.4-d)/(R*.4),0,1))
+    wgt*=sg/4.5
+    v=(1-wgt)*b1+wgt*b2
+    return np.where(band,v>0.5,F)
 if __name__=='__main__':
     for i in map(int,sys.argv[1:]):
         C=clean(i); F=np.array(Image.open(f'cap/full_{i:03d}.png').convert('L'))<128

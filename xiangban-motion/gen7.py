@@ -9,6 +9,7 @@ for k in R:  # 平滑寬度並補償像素取樣 (+1px)
         wgt=np.clip(np.minimum(u,1-u)/0.15,0,1)          # 兩端 15% 逐漸回到實測值（與手掌、頂端切口對齊）
         if k=='xiang': wgt=np.where(u<.3,0,wgt)        # 巷肩膀段保留沿空洞邊緣的實測值
         R[k][key]=[round(float(v)+add_,2) for v in raw*(1-wgt)+sm*wgt]
+R['ban']['bendK']=float(__import__('os').environ.get('BENDK',3.5)); R['xiang']['bendK']=1.0
 R['ban']['wEnd']=float(__import__('os').environ.get('WEND',1)); R['xiang']['wEnd']=float(__import__('os').environ.get('WENDX',1.5))
 for _k in R:
     _r=R[_k]; _A=np.array(_r['A']); _B=np.array(_r['B']); _P=[_A,_A+_r['k'][0]*np.array(_r['t0']),_B-_r['k'][1]*np.array(_r['t1']),_B]
@@ -88,8 +89,10 @@ function armPath(r,A,t0,P,ang,ext,extW,k0min=0,hs=1){
   const s=Math.max(.01,Math.min(1.15,L/Lrest)), t1=[Math.cos(deg(ang)),Math.sin(deg(ang))];
   // 控制柄不得超過手臂長度的 45%，避免短手臂扭成 Z 字
   const kcap=.45*L;
+  // 手掌相對手臂轉得越多，末端控制柄越長，彎度分散到整條手臂，內側不會擠出折角
+  const bend=Math.abs(ang-angOf(r.t1)), k1e=(r.k[1]+(r.bendK||0)*bend)*s;
   const k0=Math.min(Math.max(r.k[0]*s,k0min),kcap);
-  const ctrl=[A,[A[0]+t0[0]*k0,A[1]+t0[1]*k0],[P[0]-t1[0]*Math.min(r.k[1]*s,kcap),P[1]-t1[1]*Math.min(r.k[1]*s,kcap)],P];
+  const ctrl=[A,[A[0]+t0[0]*k0,A[1]+t0[1]*k0],[P[0]-t1[0]*Math.min(k1e,kcap),P[1]-t1[1]*Math.min(k1e,kcap)],P];
   const LrA=r.Larc||Lrest, S1=[],S2=[],N=90, nrm=d=>[-d[1],d[0]];
   const push=(p,d,hw)=>{const n=nrm(d);S1.push([p[0]+n[0]*hw,p[1]+n[1]*hw]);S2.push([p[0]-n[0]*hw,p[1]-n[1]*hw]);};
   const o0=r.o[0], nn=[-t0[1],t0[0]];
