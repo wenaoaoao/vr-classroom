@@ -1,5 +1,5 @@
 import json
-KEY=json.load(open('source/keys.json')); KEY['lift']=float(__import__('os').environ.get('LIFT',12)); KEY['lean']=float(__import__('os').environ.get('LEAN',3)); KEY['dy2']=float(__import__('os').environ.get('DY',0)); KEY['dx2']=float(__import__('os').environ.get('DX',6)); KEY['capW']=52.5
+KEY=json.load(open('source/keys.json')); KEY['lift']=float(__import__('os').environ.get('LIFT',0)); KEY['lean']=float(__import__('os').environ.get('LEAN',3)); KEY['dy2']=float(__import__('os').environ.get('DY',4)); KEY['dx2']=float(__import__('os').environ.get('DX',0)); KEY['capW']=52.5
 D=json.load(open('layers5.json')); P=D['paths']; R=D['rig']
 import numpy as np
 for k in R:  # 平滑寬度並補償像素取樣 (+1px)
@@ -7,8 +7,13 @@ for k in R:  # 平滑寬度並補償像素取樣 (+1px)
     for key,add_ in (('w',.6),('o',0)):
         raw=np.array(R[k][key]); c=np.polyfit(u,raw,3); sm=np.polyval(c,u)
         wgt=np.clip(np.minimum(u,1-u)/0.15,0,1)          # 兩端 15% 逐漸回到實測值（與手掌、頂端切口對齊）
+        if k=='xiang': wgt=np.where(u<.3,0,wgt)        # 巷肩膀段保留沿空洞邊緣的實測值
         R[k][key]=[round(float(v)+add_,2) for v in raw*(1-wgt)+sm*wgt]
 R['ban']['wEnd']=float(__import__('os').environ.get('WEND',1)); R['xiang']['wEnd']=float(__import__('os').environ.get('WENDX',1.5))
+for _k in R:
+    _r=R[_k]; _A=np.array(_r['A']); _B=np.array(_r['B']); _P=[_A,_A+_r['k'][0]*np.array(_r['t0']),_B-_r['k'][1]*np.array(_r['t1']),_B]
+    _u=np.linspace(0,1,200)[:,None]; _c=(1-_u)**3*_P[0]+3*(1-_u)**2*_u*_P[1]+3*(1-_u)*_u**2*_P[2]+_u**3*_P[3]
+    _r['Larc']=float(np.sum(np.linalg.norm(np.diff(_c,axis=0),axis=1)))
 rig=json.dumps(R)
 html='''<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -85,12 +90,16 @@ function armPath(r,A,t0,P,ang,ext,extW,k0min=0,hs=1){
   const kcap=.45*L;
   const k0=Math.min(Math.max(r.k[0]*s,k0min),kcap);
   const ctrl=[A,[A[0]+t0[0]*k0,A[1]+t0[1]*k0],[P[0]-t1[0]*Math.min(r.k[1]*s,kcap),P[1]-t1[1]*Math.min(r.k[1]*s,kcap)],P];
-  const S1=[],S2=[],N=90, nrm=d=>[-d[1],d[0]];
+  const LrA=r.Larc||Lrest, S1=[],S2=[],N=90, nrm=d=>[-d[1],d[0]];
   const push=(p,d,hw)=>{const n=nrm(d);S1.push([p[0]+n[0]*hw,p[1]+n[1]*hw]);S2.push([p[0]-n[0]*hw,p[1]-n[1]*hw]);};
   const o0=r.o[0], nn=[-t0[1],t0[0]];
   for(let i=40;i>=1;i--){const e=ext*i/40, w=extW?lerp(r.w[0],extW,smooth(Math.min(1,e/45))):r.w[0];
     push([A[0]-t0[0]*e+nn[0]*o0,A[1]-t0[1]*e+nn[1]*o0],t0,w/2);}
-  for(let i=0;i<=N;i++){const u=i/N;let p=bez3(ctrl,u),d=bez3d(ctrl,u);const n=Math.hypot(d[0],d[1])||1;d=[d[0]/n,d[1]/n];
+  // 寬度依「離起點的實際距離」取樣，靠手掌端再漸回參數 u：手臂很短時肩膀附近的寬度不會被壓縮
+  let arc=0, prev=null;
+  for(let i=0;i<=N;i++){const u0=i/N;let p=bez3(ctrl,u0),d=bez3d(ctrl,u0);const n=Math.hypot(d[0],d[1])||1;d=[d[0]/n,d[1]/n];
+    if(prev)arc+=Math.hypot(p[0]-prev[0],p[1]-prev[1]); prev=p;
+    const u=lerp(Math.min(1,arc/LrA),u0,smooth(clamp((u0-.35)/.65)));
     const sc=lerp(1,hs,smooth(u)), of=widthAt(r.o,u)*sc; p=[p[0]-d[1]*of,p[1]+d[0]*of]; push(p,d,(widthAt(r.w,u)+(r.wEnd||0)*smooth(clamp((u-.88)/.12)))*sc/2);
     if(i===N){ // 伸進手掌 6px，並內縮，避免在手腕處露出角
       push([p[0]+d[0]*6,p[1]+d[1]*6],d,widthAt(r.w,u)*sc*.42);}}
@@ -119,7 +128,7 @@ function arcTable(fn){ // 弧長重新取樣，讓 s 均勻對應距離
 }
 let PATH=null;
 function buildPaths(){
-  const X=RIG.xiang,k1=KEY[1],k2=KEY[2],P2=[k2.xiang.P[0]+(KEY.dx2||0),k2.xiang.P[1]+(KEY.dy2||0)],P1=add(k1.xiang.P,X.t0,7);
+  const X=RIG.xiang,k1=KEY[1],k2=KEY[2],P2=[k2.xiang.P[0]+(KEY.dx2||0),k2.xiang.P[1]+(KEY.dy2||0)],P1=add(k1.xiang.P,X.t0,14);
   const a1=deg(k1.xiang.ang), a2=deg(k2.xiang.ang);
   PATH={
     // 巷：手一直接在屋簷末端；從第 1 張的位置往外、往上伸到第 2 張
@@ -159,7 +168,7 @@ function render(t){
     // 巷
     let r=RIG.xiang, s=pose('xiang',t), t0=rot(r.t0,s.lift);
     const dAlong=(s.P[0]-r.A[0])*r.t0[0]+(s.P[1]-r.A[1])*r.t0[1];
-    $('xiangArmLive').setAttribute('d',dAlong>.5?armPath(r,r.A,t0,s.P,s.ang,10,0,40*s.lift/KEY.lift,s.hs):'');
+    $('xiangArmLive').setAttribute('d',dAlong>.5?armPath(r,r.A,t0,s.P,s.ang,2,0,KEY.lift?40*s.lift/KEY.lift:0,s.hs):'');
     const J=$('xiangJoint'); J.setAttribute('cx',r.A[0]);J.setAttribute('cy',r.A[1]);J.setAttribute('r',0);
     placeHand($('xiangHandLive'),r,s.P,s.ang,s.hs);
     // 抬手時屋簷上緣跟著隆起：從屋脊附近平順過渡到手臂的新角度
@@ -192,4 +201,4 @@ if(matchMedia('(prefers-reduced-motion: reduce)').matches) render(99); else {ren
 </html>'''
 for k,v in P.items(): html=html.replace('"@'+k+'"','"'+v+'"')
 html=html.replace('@rig',rig).replace('@keys',json.dumps(KEY))
-open('index.html','w').write(html)
+open('rig.html','w').write(html)

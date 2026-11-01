@@ -67,7 +67,8 @@ for i in range(_cut):
 sep=(YY<1079)|(XX>521)   # 巳：右緣 x≈520、上緣 y≈1079，以內都保留為靜態
 upper=(YY<1200)&sep
 xStatic=c6&~(upper&beyond(X['A'],X['t0'],0))
-xArm  =c6&upper&beyond(X['A'],X['t0'],-1)&~beyond(X['B'],X['t1'],1)
+upperO=(YY<1200)&((YY<1082)|(XX>518))   # 手臂片段多疊 3px 到「巳」上，避免邊對邊的細縫
+xArm  =c6&upperO&beyond(X['A'],X['t0'],-1)&~beyond(X['B'],X['t1'],1)
 xHand =c6&upper&beyond(X['B'],X['t1'],-1)&(XX>590)
 # ---- 伴 手臂：撇頂端 y≈784 以下到手腕 ----
 bc=[((lambda xs:(xs.min()+xs.max())/2)(np.where(c2[y,640:900])[0]+640),y) for y in range(784,908,3)]
