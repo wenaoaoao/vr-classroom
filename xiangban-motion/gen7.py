@@ -1,9 +1,14 @@
 import json
-KEY=json.load(open('source/keys.json')); KEY['lift']=-28; KEY['capW']=52.5
+KEY=json.load(open('source/keys.json')); KEY['lift']=float(__import__('os').environ.get('LIFT',12)); KEY['lean']=float(__import__('os').environ.get('LEAN',3)); KEY['dy2']=float(__import__('os').environ.get('DY',0)); KEY['dx2']=float(__import__('os').environ.get('DX',6)); KEY['capW']=52.5
 D=json.load(open('layers5.json')); P=D['paths']; R=D['rig']
 import numpy as np
 for k in R:  # 平滑寬度並補償像素取樣 (+1px)
-    R[k]['w']=[round(v+.6,2) for v in R[k]['w']]; R[k]['o']=[round(v,2) for v in R[k]['o']]
+    u=np.linspace(0,1,len(R[k]['w']))
+    for key,add_ in (('w',.6),('o',0)):
+        raw=np.array(R[k][key]); c=np.polyfit(u,raw,3); sm=np.polyval(c,u)
+        wgt=np.clip(np.minimum(u,1-u)/0.15,0,1)          # 兩端 15% 逐漸回到實測值（與手掌、頂端切口對齊）
+        R[k][key]=[round(float(v)+add_,2) for v in raw*(1-wgt)+sm*wgt]
+R['ban']['wEnd']=float(__import__('os').environ.get('WEND',1)); R['xiang']['wEnd']=float(__import__('os').environ.get('WENDX',1.5))
 rig=json.dumps(R)
 html='''<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -29,7 +34,7 @@ html='''<!DOCTYPE html>
 <body>
 <div class="stage">
 <svg id="logo" viewBox="40 700 1300 670" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="巷伴">
-  <defs><clipPath id="xiangSleeve" clipPathUnits="userSpaceOnUse"><path id="xiangSleevePath"/></clipPath><clipPath id="banSleeve" clipPathUnits="userSpaceOnUse"><rect x="0" y="755.5" width="1400" height="700"/></clipPath><radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--lampIn)"/><stop offset="1" stop-color="var(--lampOut)"/></radialGradient></defs>
+  <defs><filter id="weld" x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox"><feMorphology operator="dilate" radius="2.2"/><feMorphology operator="erode" radius="2.2"/></filter><clipPath id="xiangSleeve" clipPathUnits="userSpaceOnUse"><path id="xiangSleevePath"/></clipPath><clipPath id="banSleeve" clipPathUnits="userSpaceOnUse"><rect x="0" y="755.5" width="1400" height="700"/></clipPath><radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--lampIn)"/><stop offset="1" stop-color="var(--lampOut)"/></radialGradient></defs>
   <g id="all">
     <path d="@xiangTop"/>
     <path d="@xiangStatic"/>
@@ -37,8 +42,8 @@ html='''<!DOCTYPE html>
     <path d="@cane"/>
     <!-- 動態時：即時計算的手臂 + 原稿手掌 -->
     <g id="live">
-      <path id="xiangSwell"/><g clip-path="url(#xiangSleeve)"><circle id="xiangJoint" r="0"/><path id="xiangArmLive"/><g id="xiangHandLive"><path d="@xiangHand"/></g></g>
-      <g clip-path="url(#banSleeve)"><path id="banArmLive"/><g id="banHandLive"><path d="@banHand"/></g></g>
+      <path id="xiangSwell"/><g><circle id="xiangJoint" r="0"/><path id="xiangArmLive"/><g id="xiangHandLive"><path d="@xiangHand"/></g></g>
+      <g clip-path="url(#banSleeve)"><g><path id="banArmLive"/><g id="banHandLive"><path d="@banHand"/></g></g></g>
     </g>
     <!-- 靜止時：原稿手臂與手 -->
     <g id="rest" style="display:none" opacity="0">
@@ -73,23 +78,27 @@ const quad=(a,c,b,t)=>[0,1].map(i=>(1-t)**2*a[i]+2*(1-t)*t*c[i]+t*t*b[i]);
 function widthAt(w,u){const x=u*(w.length-1),i=Math.min(w.length-2,Math.floor(x));return lerp(w[i],w[i+1],x-i);}
 
 /* 生成手臂輪廓：先一段沿起點切線的直線（藏在袖口裡），再接一段貝茲曲線到手腕 */
-function armPath(r,A,t0,P,ang,ext,extW,k0min=0){
+function armPath(r,A,t0,P,ang,ext,extW,k0min=0,hs=1){
   const Lrest=Math.hypot(r.B[0]-r.A[0],r.B[1]-r.A[1]), L=Math.hypot(P[0]-A[0],P[1]-A[1]);
-  const s=Math.max(.2,Math.min(1.15,L/Lrest)), t1=[Math.cos(deg(ang)),Math.sin(deg(ang))];
-  const k0=Math.max(r.k[0]*s,k0min);
-  const ctrl=[A,[A[0]+t0[0]*k0,A[1]+t0[1]*k0],[P[0]-t1[0]*r.k[1]*s,P[1]-t1[1]*r.k[1]*s],P];
-  const S1=[],S2=[],N=40, nrm=d=>[-d[1],d[0]];
+  const s=Math.max(.01,Math.min(1.15,L/Lrest)), t1=[Math.cos(deg(ang)),Math.sin(deg(ang))];
+  // 控制柄不得超過手臂長度的 45%，避免短手臂扭成 Z 字
+  const kcap=.45*L;
+  const k0=Math.min(Math.max(r.k[0]*s,k0min),kcap);
+  const ctrl=[A,[A[0]+t0[0]*k0,A[1]+t0[1]*k0],[P[0]-t1[0]*Math.min(r.k[1]*s,kcap),P[1]-t1[1]*Math.min(r.k[1]*s,kcap)],P];
+  const S1=[],S2=[],N=90, nrm=d=>[-d[1],d[0]];
   const push=(p,d,hw)=>{const n=nrm(d);S1.push([p[0]+n[0]*hw,p[1]+n[1]*hw]);S2.push([p[0]-n[0]*hw,p[1]-n[1]*hw]);};
-  for(let i=24;i>=1;i--){const e=ext*i/24, w=extW?lerp(r.w[0],extW,Math.min(1,e/30)):r.w[0];
-    push([A[0]-t0[0]*e,A[1]-t0[1]*e],t0,w/2);}
+  const o0=r.o[0], nn=[-t0[1],t0[0]];
+  for(let i=40;i>=1;i--){const e=ext*i/40, w=extW?lerp(r.w[0],extW,smooth(Math.min(1,e/45))):r.w[0];
+    push([A[0]-t0[0]*e+nn[0]*o0,A[1]-t0[1]*e+nn[1]*o0],t0,w/2);}
   for(let i=0;i<=N;i++){const u=i/N;let p=bez3(ctrl,u),d=bez3d(ctrl,u);const n=Math.hypot(d[0],d[1])||1;d=[d[0]/n,d[1]/n];
-    if(i===N)p=[p[0]+d[0]*7,p[1]+d[1]*7];
-    const of=widthAt(r.o,u); p=[p[0]-d[1]*of,p[1]+d[0]*of]; push(p,d,widthAt(r.w,u)/2);}
+    const sc=lerp(1,hs,smooth(u)), of=widthAt(r.o,u)*sc; p=[p[0]-d[1]*of,p[1]+d[0]*of]; push(p,d,(widthAt(r.w,u)+(r.wEnd||0)*smooth(clamp((u-.88)/.12)))*sc/2);
+    if(i===N){ // 伸進手掌 6px，並內縮，避免在手腕處露出角
+      push([p[0]+d[0]*6,p[1]+d[1]*6],d,widthAt(r.w,u)*sc*.42);}}
   const pts=S1.concat(S2.reverse());
   return 'M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L')+'Z';
 }
-function placeHand(el,r,P,ang){
-  el.setAttribute('transform',`translate(${P[0]} ${P[1]}) rotate(${ang-angOf(r.t1)}) translate(${-r.B[0]} ${-r.B[1]})`);
+function placeHand(el,r,P,ang,hs=1){
+  el.setAttribute('transform',`translate(${P[0]} ${P[1]}) rotate(${ang-angOf(r.t1)}) scale(${hs}) translate(${-r.B[0]} ${-r.B[1]})`);
 }
 const rot=(v,a)=>{const c=Math.cos(deg(a)),s=Math.sin(deg(a));return [v[0]*c-v[1]*s,v[0]*s+v[1]*c];};
 const add=(a,b,k=1)=>[a[0]+b[0]*k,a[1]+b[1]*k];
@@ -100,7 +109,7 @@ const smooth=x=>x*x*(3-2*x);
    鬆開：長者先放，青年晚 0.08 秒，結尾帶一點點回彈。 */
 const M={contact:1.6, clasp:[1.5,2.2], up:5, tilt:1.5,
   ban:{start:.45, ease:cb(.42,0,.28,1), rel:[2.2,2.85]},
-  xiang:{start:.62, ease:cb(.45,0,.25,1), rel:[2.28,2.98]}};
+  xiang:{start:.55, ease:cb(.42,0,.28,1), rel:[2.28,2.98]}};
 const easeRel=cb(.35,0,.2,1.06);
 function arcTable(fn){ // 弧長重新取樣，讓 s 均勻對應距離
   const N=200,pts=[],acc=[0]; for(let i=0;i<=N;i++)pts.push(fn(i/N));
@@ -110,11 +119,11 @@ function arcTable(fn){ // 弧長重新取樣，讓 s 均勻對應距離
 }
 let PATH=null;
 function buildPaths(){
-  const X=RIG.xiang,t0=X.t0,k1=KEY[1],k2=KEY[2],P2=k2.xiang.P;
-  const K1=add(X.A,t0,-88);   // 手指剛好藏在肩膀切線後
-  const a2=deg(k2.xiang.ang);
+  const X=RIG.xiang,k1=KEY[1],k2=KEY[2],P2=[k2.xiang.P[0]+(KEY.dx2||0),k2.xiang.P[1]+(KEY.dy2||0)],P1=add(k1.xiang.P,X.t0,7);
+  const a1=deg(k1.xiang.ang), a2=deg(k2.xiang.ang);
   PATH={
-    xiang:arcTable(u=>bez3([K1,add(X.A,t0,38),[P2[0]-Math.cos(a2)*38+6,P2[1]-Math.sin(a2)*38+22],P2],u)),
+    // 巷：手一直接在屋簷末端；從第 1 張的位置往外、往上伸到第 2 張
+    xiang:arcTable(u=>bez3([P1,[P1[0]+Math.cos(a1)*45,P1[1]+Math.sin(a1)*45+18],[P2[0]-Math.cos(a2)*45,P2[1]-Math.sin(a2)*45+20],P2],u)),
     ban:arcTable(u=>[lerp(k1.ban.P[0],k2.ban.P[0],u),lerp(k1.ban.P[1],k2.ban.P[1],u)])
   };
 }
@@ -122,19 +131,18 @@ function pose(key,t){
   if(!PATH)buildPaths();
   const r=RIG[key],m=M[key],k1=KEY[1][key],k2=KEY[2][key],aR=angOf(r.t1);
   const s=m.ease(clamp((t-m.start)/(M.contact-m.start)));
-  let P=PATH[key](s), ang, lift=0;
+  let P=PATH[key](s), ang=lerp(k1.ang,k2.ang,s), lift=0, hs=1;
+  let lean=0;
+  if(key==='ban') lean=KEY.lean*s;
   if(key==='xiang'){
-    const aX=angOf(r.t0);
-    ang=lerp(aX,k2.ang,smooth(clamp((s-.35)/.65)));
-    lift=KEY.lift*smooth(clamp((s-.3)/.7));
-  }else ang=lerp(k1.ang,k2.ang,s);
-  // 握住：一起往上帶再落回（起訖速度為 0）
+    hs=lerp(k1.scale||1,1,smooth(clamp(s/.8)));         // 手掌由小長到原尺寸
+    lift=KEY.lift*smooth(clamp((s-.25)/.75));
+  }
   const c=clamp((t-M.clasp[0])/(M.clasp[1]-M.clasp[0])), b=(1-Math.cos(2*Math.PI*c))/2;
   P=[P[0],P[1]-M.up*b]; ang-=M.tilt*b;
-  // 鬆開
   const g=easeRel(clamp((t-m.rel[0])/(m.rel[1]-m.rel[0])));
-  P=[lerp(P[0],r.B[0],g),lerp(P[1],r.B[1],g)]; ang=lerp(ang,aR,g); lift=lerp(lift,0,g);
-  return {P,ang,lift};
+  P=[lerp(P[0],r.B[0],g),lerp(P[1],r.B[1],g)]; ang=lerp(ang,aR,g); lift=lerp(lift,0,g); lean=lerp(lean,0,g);
+  return {P,ang,lift,hs,lean};
 }
 const $=id=>document.getElementById(id);
 (function(){ // 巷的袖口：肩膀切線之外的半平面
@@ -151,9 +159,9 @@ function render(t){
     // 巷
     let r=RIG.xiang, s=pose('xiang',t), t0=rot(r.t0,s.lift);
     const dAlong=(s.P[0]-r.A[0])*r.t0[0]+(s.P[1]-r.A[1])*r.t0[1];
-    $('xiangArmLive').setAttribute('d',dAlong>4?armPath(r,r.A,t0,s.P,s.ang,10,0,40*s.lift/KEY.lift):'');
-    const J=$('xiangJoint'); J.setAttribute('cx',r.A[0]);J.setAttribute('cy',r.A[1]);J.setAttribute('r',dAlong>4?r.w[0]/2-.3:0);
-    placeHand($('xiangHandLive'),r,s.P,s.ang);
+    $('xiangArmLive').setAttribute('d',dAlong>.5?armPath(r,r.A,t0,s.P,s.ang,10,0,40*s.lift/KEY.lift,s.hs):'');
+    const J=$('xiangJoint'); J.setAttribute('cx',r.A[0]);J.setAttribute('cy',r.A[1]);J.setAttribute('r',0);
+    placeHand($('xiangHandLive'),r,s.P,s.ang,s.hs);
     // 抬手時屋簷上緣跟著隆起：從屋脊附近平順過渡到手臂的新角度
     const E=r.topEdge, x0=E.x[0], x1=E.T0[0], y0=E.y[0], y1=E.T0[1];
     const m0=(E.y[2]-E.y[0])/(E.x[2]-E.x[0]), m1=t0[1]/t0[0], h=x1-x0;
@@ -164,8 +172,8 @@ function render(t){
     $('xiangSwell').setAttribute('d',s.lift<-.5?'M'+up.concat(dn.reverse()).map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L')+'Z':'');
     // 伴：起點跟著手腕一起滑動
     r=RIG.ban; s=pose('ban',t);
-    const A2=add(s.P,[r.A[0]-r.B[0],r.A[1]-r.B[1]]);
-    $('banArmLive').setAttribute('d',armPath(r,A2,r.t0,s.P,s.ang,220,KEY.capW));
+    const A2=add(s.P,rot([r.A[0]-r.B[0],r.A[1]-r.B[1]],s.lean));
+    $('banArmLive').setAttribute('d',armPath(r,A2,rot(r.t0,s.lean),s.P,s.ang,220,KEY.capW));
     placeHand($('banHandLive'),r,s.P,s.ang);
   }
   const l=t-T.lamp; let o=0;

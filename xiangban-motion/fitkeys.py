@@ -1,7 +1,7 @@
 import numpy as np, json, math
 from PIL import Image
 from scipy import ndimage, signal
-orig=np.array(Image.open('source/xiangban-logo.jpg').convert('L'))<128
+orig=np.array(Image.open('/tmp/claude-0/-home-user-vr-classroom/55aee804-124e-5075-8d61-d924741d0c98/images/1.jpg').convert('L'))<128
 H,W=orig.shape; YY,XX=np.mgrid[0:H,0:W]
 lab,_=ndimage.label(orig)
 R=json.load(open('layers5.json'))['rig']
