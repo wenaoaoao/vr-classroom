@@ -66,7 +66,7 @@ const quad=(a,c,b,t)=>[0,1].map(i=>(1-t)**2*a[i]+2*(1-t)*t*c[i]+t*t*b[i]);
 function widthAt(w,u){const x=u*(w.length-1),i=Math.min(w.length-2,Math.floor(x));return lerp(w[i],w[i+1],x-i);}
 
 /* 生成手臂輪廓：先一段沿起點切線的直線（藏在袖口裡），再接一段貝茲曲線到手腕 */
-function armPath(r,A,t0,P,ang,ext,extW,k0min=0,hs=1){
+function armPath(r,A,t0,P,ang,ext,extW,k0min=0,hs=1,pre=0){
   const Lrest=Math.hypot(r.B[0]-r.A[0],r.B[1]-r.A[1]), L=Math.hypot(P[0]-A[0],P[1]-A[1]);
   const s=Math.max(.01,Math.min(1.15,L/Lrest)), t1=[Math.cos(deg(ang)),Math.sin(deg(ang))];
   // 控制柄不得超過手臂長度的 45%，避免短手臂扭成 Z 字
@@ -74,7 +74,18 @@ function armPath(r,A,t0,P,ang,ext,extW,k0min=0,hs=1){
   // 手掌相對手臂轉得越多，末端控制柄越長，彎度分散到整條手臂，內側不會擠出折角
   const bend=Math.abs(ang-angOf(r.t1)), k1e=(r.k[1]+(r.bendK||0)*bend)*s;
   const k0=Math.min(Math.max(r.k[0]*s,k0min),kcap);
-  const ctrl=[A,[A[0]+t0[0]*k0,A[1]+t0[1]*k0],[P[0]-t1[0]*Math.min(k1e,kcap),P[1]-t1[1]*Math.min(k1e,kcap)],P];
+  let ctrl=[A,[A[0]+t0[0]*k0,A[1]+t0[1]*k0],[P[0]-t1[0]*Math.min(k1e,kcap),P[1]-t1[1]*Math.min(k1e,kcap)],P];
+  if(pre>0){ // 曲線從肩膀後方 pre 處開始（藏在屋頂內），露出的部分永遠是單純的 C 形
+    const A0=[A[0]-t0[0]*pre,A[1]-t0[1]*pre], Lp=Math.hypot(P[0]-A0[0],P[1]-A0[1]);
+    // 二次曲線等效：兩個控制點都指向起點切線與終點切線的交點 X，曲線不可能有反曲點
+    const den=t0[0]*t1[1]-t0[1]*t1[0];
+    let lam=-1,mu=-1;
+    if(Math.abs(den)>1e-3){const dx=P[0]-A0[0],dy=P[1]-A0[1]; lam=(dx*t1[1]-dy*t1[0])/den; mu=(dx*t0[1]-dy*t0[0])/den;}
+    if(lam>Lp*.15&&mu>Lp*.15&&lam<Lp*1.5&&mu<Lp*1.5){
+      const Xp=[A0[0]+t0[0]*lam,A0[1]+t0[1]*lam];
+      ctrl=[A0,[A0[0]+(Xp[0]-A0[0])*2/3,A0[1]+(Xp[1]-A0[1])*2/3],[P[0]+(Xp[0]-P[0])*2/3,P[1]+(Xp[1]-P[1])*2/3],P];
+    } else ctrl=[A0,[A0[0]+t0[0]*Lp*.42,A0[1]+t0[1]*Lp*.42],[P[0]-t1[0]*Lp*.33,P[1]-t1[1]*Lp*.33],P];
+  }
   const LrA=r.Larc||Lrest, S1=[],S2=[],N=90, nrm=d=>[-d[1],d[0]];
   const push=(p,d,hw)=>{const n=nrm(d);S1.push([p[0]+n[0]*hw,p[1]+n[1]*hw]);S2.push([p[0]-n[0]*hw,p[1]-n[1]*hw]);};
   const o0=r.o[0], nn=[-t0[1],t0[0]];
@@ -84,7 +95,7 @@ function armPath(r,A,t0,P,ang,ext,extW,k0min=0,hs=1){
   let arc=0, prev=null;
   for(let i=0;i<=N;i++){const u0=i/N;let p=bez3(ctrl,u0),d=bez3d(ctrl,u0);const n=Math.hypot(d[0],d[1])||1;d=[d[0]/n,d[1]/n];
     if(prev)arc+=Math.hypot(p[0]-prev[0],p[1]-prev[1]); prev=p;
-    const u=lerp(Math.min(1,arc/LrA),u0,smooth(clamp((u0-.35)/.65)));
+    const u=lerp(clamp((arc-pre)/LrA),u0,smooth(clamp((u0-.35)/.65)));
     const sc=lerp(1,hs,smooth(u)), of=widthAt(r.o,u)*sc; p=[p[0]-d[1]*of,p[1]+d[0]*of]; push(p,d,(widthAt(r.w,u)+(r.wEnd||0)*smooth(clamp((u-.88)/.12)))*sc/2);
     if(i===N){ // 伸進手掌 6px，並內縮，避免在手腕處露出角
       push([p[0]+d[0]*6,p[1]+d[1]*6],d,widthAt(r.w,u)*sc*.42);}}
@@ -164,7 +175,7 @@ function render(t){
     // 巷
     let r=RIG.xiang, s=pose('xiang',t), t0=rot(r.t0,s.lift);
     const dAlong=(s.P[0]-r.A[0])*r.t0[0]+(s.P[1]-r.A[1])*r.t0[1];
-    $('xiangArmLive').setAttribute('d',dAlong>.5?armPath(r,r.A,t0,s.P,s.ang,2,0,KEY.lift?40*s.lift/KEY.lift:0,s.hs):'');
+    $('xiangArmLive').setAttribute('d',dAlong>-55?armPath(r,r.A,t0,s.P,s.ang,2,0,0,s.hs,60):'');
     const J=$('xiangJoint'); J.setAttribute('cx',r.A[0]);J.setAttribute('cy',r.A[1]);J.setAttribute('r',0);
     placeHand($('xiangHandLive'),r,s.P,s.ang,s.hs);
     // 抬手時屋簷上緣跟著隆起：從屋脊附近平順過渡到手臂的新角度

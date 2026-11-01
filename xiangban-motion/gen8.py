@@ -33,7 +33,7 @@ html=f'''<!DOCTYPE html>
     <radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--lampIn)"/><stop offset="1" stop-color="var(--lampOut)"/></radialGradient>
   </defs>
   <g id="all">
-    <g id="play"><g clip-path="url(#outsideQ)">{static}</g><path id="frame"/></g>
+    <g id="play">{static}<path id="frame"/></g>
     <g id="rest" style="display:none">{rest}</g>
     <path id="lamp" d="{L['window']}" opacity="0"/>
   </g>

@@ -24,7 +24,7 @@ def key1_weight(t):  # 0.45 秒前完全用手稿，0.75 秒前漸變到骨架
     if t<=.45: return 1.0
     if t>=.75: return 0.0
     u=(t-.45)/.30; return 1-u*u*(3-2*u)
-def clean(i):
+def clean(i, want_m=False):
     F=np.array(Image.open(f'cap/full_{i:03d}.png').convert('L'))<128
     M=np.array(Image.open(f'cap/mov_{i:03d}.png').convert('L'))<128
     wk=key1_weight(i/30)
@@ -36,7 +36,7 @@ def clean(i):
         v=(1-wk)*sdf(F)+wk*sdf(K); F=np.where(R,v>0,F)
         M=M|(R&F)
     sg=sigma_for(i)
-    if sg<=0.05 or not M.any(): return F
+    if sg<=0.05 or not M.any(): return (F,M) if want_m else F
     band=ndimage.binary_dilation(M,iterations=10)
     f=F.astype(float); b1=ndimage.gaussian_filter(f,sg); b2=ndimage.gaussian_filter(f,sg*2.4)
     # 接縫點周圍（半徑約 20 原稿 px）改用較強的平滑，向外平順過渡
@@ -45,7 +45,8 @@ def clean(i):
         x,y=J[i][k]; d=np.hypot(xx-x,yy-y); wgt=np.maximum(wgt,np.clip((R*1.4-d)/(R*.4),0,1))
     wgt*=sg/4.5
     v=(1-wgt)*b1+wgt*b2
-    return np.where(band,v>0.5,F)
+    out=np.where(band,v>0.5,F)
+    return (out,M) if want_m else out
 if __name__=='__main__':
     for i in map(int,sys.argv[1:]):
         C=clean(i); F=np.array(Image.open(f'cap/full_{i:03d}.png').convert('L'))<128
