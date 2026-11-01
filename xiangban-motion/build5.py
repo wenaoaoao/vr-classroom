@@ -24,7 +24,7 @@ def fit(pts,edt):
     def err(k):
         P=np.array([A,A+k[0]*t0,B-k[1]*t1,B]); cur=bez(P,np.linspace(0,1,300))
         return sum(np.min(np.linalg.norm(cur-p,axis=1)) for p in pts)
-    k=optimize.minimize(err,[30,30],method='Nelder-Mead').x
+    k=optimize.minimize(err,[30,30],method='L-BFGS-B',bounds=[(10,90),(10,90)]).x
     P=np.array([A,A+k[0]*t0,B-k[1]*t1,B])
     us=np.linspace(0,1,21); pts=bez(P,us)
     d=(-3*(1-us)[:,None]**2*P[0]+(3*(1-us)**2-6*(1-us)*us)[:,None]*P[1]+(6*(1-us)*us-3*us**2)[:,None]*P[2]+3*us[:,None]**2*P[3])
@@ -57,11 +57,20 @@ cres=poly([(762,965),(845,928),(845,1001),(762,1001)])
 bCap =c2&~shaft&~beyond(B_['A'],B_['t0'],0)
 bArm =c2&~shaft&~cres&beyond(B_['A'],B_['t0'],-1)&~beyond(B_['B'],B_['t1'],1)
 bHand=c2&~shaft&~cres&beyond(B_['B'],B_['t1'],-1)
-cane =c2&(shaft|cres)
+cresO=poly([(757,967),(845,928),(845,1001),(757,1001)])   # 握把多留一點疊在手下
+import os
+_k1='key1.png' if os.path.exists('key1.png') else 'source/key1.png'
+key1=np.array(Image.open(_k1).convert('L'))<128
+handleL=key1&poly([(708,950),(772,950),(772,1003),(708,1003)])&c2   # 設計稿第 1 張：握把左半
+cane =c2&(shaft|cresO) | handleL
 win=ndimage.binary_fill_holes(c6)&~c6; wl,_=ndimage.label(win); win=wl==wl[1145,370]
 out={'paths':{'xiangTop':path(c(1)),'xiangStatic':path(xStatic),'xiangArm':path(xArm),'xiangHand':path(xHand),
   'banCap':path(bCap),'banArm':path(bArm),'banHand':path(bHand),'cane':path(cane),
   'banMain':path(c(3)),'dot1':path(c(4)),'dot2':path(c(5)),'window':path(win)},
   'rig':{'xiang':X,'ban':B_}}
+# 巷的屋簷上緣（抬手時用來做隆起過渡）
+_A=np.array(X['A']); _t=np.array(X['t0']); _n=np.array([-_t[1],_t[0]]); _T0=_A-_n*X['w'][0]/2
+_xs=list(range(475,int(_T0[0])+1,3))
+out['rig']['xiang']['topEdge']={'x':_xs,'y':[float(980+np.where(c6[980:1120,x])[0].min()) for x in _xs],'T0':_T0.tolist()}
 json.dump(out,open('layers5.json','w'))
 print(json.dumps(out['rig'],indent=0)[:900])
