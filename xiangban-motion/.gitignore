@@ -1,3 +1,4 @@
 cap/
 layers5.json
 frames.json
+__pycache__/

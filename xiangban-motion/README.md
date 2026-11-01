@@ -55,6 +55,18 @@
 
 `frames-contact-sheet.png`：手部區域每 3 格一張的對照圖（標有格數與秒數），回饋時可直接指出格數。
 
+## 放進網頁
+把 `embed/xiangban-logo.js` 放到網站上，然後：
+```html
+<script src="xiangban-logo.js" defer></script>
+<xiangban-logo trigger="load"></xiangban-logo>
+```
+- `trigger="load"`：開啟網頁就播放；不加則捲動到看得見時才播放。
+- `delay="0.3"`：延遲秒數。`static`：不播放，直接顯示完成的標準字。
+- 顏色用 CSS 變數：`--xiangban-ink`、`--xiangban-lamp-in`、`--xiangban-lamp-out`。
+- `element.play()` 重新播放；播完會發出 `ended` 事件。
+- 範例：`embed/example.html`。更新動畫後執行 `python3 gen_embed.py` 重新產生。
+
 ## 重新產生
 ```bash
 pip install potracer scipy pillow numpy   # 另需 Node + Playwright

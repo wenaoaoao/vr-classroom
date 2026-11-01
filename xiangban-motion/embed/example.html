@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>巷伴｜範例頁面</title>
+<!-- 1. 載入元件 -->
+<script src="xiangban-logo.js" defer></script>
+<style>
+  body{margin:0;font-family:system-ui,"PingFang TC","Noto Sans TC",sans-serif;color:#634F44;background:#fff}
+  header{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:0 6vw}
+  header xiangban-logo{max-width:560px}
+  header p{letter-spacing:.2em;margin:0}
+  section{padding:80px 6vw;max-width:720px;margin:auto;line-height:1.8}
+  .dark{background:#000;color:#fff;--xiangban-ink:#fff;--xiangban-lamp-in:#FFE7B0;--xiangban-lamp-out:#F0B04F;padding:80px 6vw;text-align:center}
+  .dark xiangban-logo{max-width:420px}
+</style>
+</head>
+<body>
+  <header>
+    <!-- 2. 放在想顯示的位置；trigger="load" = 開啟網頁就播放 -->
+    <xiangban-logo trigger="load" delay="0.3"></xiangban-logo>
+    <p>青銀互助媒合工具組</p>
+  </header>
+  <section>
+    <h2>長者不只是被照顧，而是還被需要</h2>
+    <p>（這裡放專案說明。）</p>
+  </section>
+  <!-- 黑底版本：用 CSS 變數改顏色；不加 trigger 則捲動到看得見時才播放 -->
+  <div class="dark"><xiangban-logo></xiangban-logo></div>
+</body>
+</html>
