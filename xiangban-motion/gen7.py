@@ -40,7 +40,7 @@ html='''<!DOCTYPE html>
 <body>
 <div class="stage">
 <svg id="logo" viewBox="40 700 1300 670" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="巷伴">
-  <defs><filter id="weld" x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox"><feMorphology operator="dilate" radius="2.2"/><feMorphology operator="erode" radius="2.2"/></filter><clipPath id="xiangSleeve" clipPathUnits="userSpaceOnUse"><path id="xiangSleevePath"/></clipPath><clipPath id="banSleeve" clipPathUnits="userSpaceOnUse"><rect x="0" y="755.5" width="1400" height="700"/></clipPath><radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--lampIn)"/><stop offset="1" stop-color="var(--lampOut)"/></radialGradient></defs>
+  <defs><clipPath id="notHole" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="M0 0H1400V2000H0Z @roofHole"/></clipPath><filter id="weld" x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox"><feMorphology operator="dilate" radius="2.2"/><feMorphology operator="erode" radius="2.2"/></filter><clipPath id="xiangSleeve" clipPathUnits="userSpaceOnUse"><path id="xiangSleevePath"/></clipPath><clipPath id="banSleeve" clipPathUnits="userSpaceOnUse"><rect x="0" y="755.5" width="1400" height="700"/></clipPath><radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--lampIn)"/><stop offset="1" stop-color="var(--lampOut)"/></radialGradient></defs>
   <g id="all">
     <path d="@xiangTop"/>
     <path d="@xiangStatic"/>
@@ -48,7 +48,7 @@ html='''<!DOCTYPE html>
     <path d="@cane"/>
     <!-- 動態時：即時計算的手臂 + 原稿手掌 -->
     <g id="live">
-      <path id="xiangSwell"/><g><circle id="xiangJoint" r="0"/><path id="xiangArmLive"/><g id="xiangHandLive"><path d="@xiangHand"/></g></g>
+      <path id="xiangSwell"/><g clip-path="url(#notHole)"><circle id="xiangJoint" r="0"/><path id="xiangArmLive"/><g id="xiangHandLive"><path d="@xiangHand"/></g></g>
       <g clip-path="url(#banSleeve)"><g><path id="banArmLive"/><g id="banHandLive"><path d="@banHand"/></g></g></g>
     </g>
     <!-- 靜止時：原稿手臂與手 -->
@@ -131,7 +131,7 @@ function arcTable(fn){ // 弧長重新取樣，讓 s 均勻對應距離
 }
 let PATH=null;
 function buildPaths(){
-  const X=RIG.xiang,k1=KEY[1],k2=KEY[2],P2=[k2.xiang.P[0]+(KEY.dx2||0),k2.xiang.P[1]+(KEY.dy2||0)],P1=add(k1.xiang.P,X.t0,14);
+  const X=RIG.xiang,k1=KEY[1],k2=KEY[2],P2=[k2.xiang.P[0]+(KEY.dx2||0),k2.xiang.P[1]+(KEY.dy2||0)],P1=add(k1.xiang.P,X.t0,0);
   const a1=deg(k1.xiang.ang), a2=deg(k2.xiang.ang);
   PATH={
     // 巷：手一直接在屋簷末端；從第 1 張的位置往外、往上伸到第 2 張
@@ -203,5 +203,6 @@ if(matchMedia('(prefers-reduced-motion: reduce)').matches) render(99); else {ren
 </body>
 </html>'''
 for k,v in P.items(): html=html.replace('"@'+k+'"','"'+v+'"')
+html=html.replace(' @roofHole"',' '+P['roofHole']+'"')
 html=html.replace('@rig',rig).replace('@keys',json.dumps(KEY))
 open('rig.html','w').write(html)

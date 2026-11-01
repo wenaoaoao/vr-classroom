@@ -64,10 +64,15 @@ for i in range(_cut):
         if a<b: b=Wc-a
         else: a=Wc-b
     X['w'][i]=a+b; X['o'][i]=(a-b)/2
-sep=(YY<1079)|(XX>521)   # 巳：右緣 x≈520、上緣 y≈1079，以內都保留為靜態
+sep=(YY<1079)|(XX>524.5)   # 巳：右緣 x≈524.5（實測）、上緣 y≈1079，以內都保留為靜態
 upper=(YY<1200)&sep
 xStatic=c6&~(upper&beyond(X['A'],X['t0'],0))
-upperO=(YY<1200)&((YY<1082)|(XX>518))   # 手臂片段多疊 3px 到「巳」上，避免邊對邊的細縫
+# 屋頂三角形空洞的右邊緣：保留一條約 12px 寬的靜態帶，空洞形狀在動畫中永遠不變
+_xe=446+(YY-1042)*0.889
+_yl=1044+(XX-448)*(1068-1044)/(524-448)       # 上界：從空洞邊緣 (448,1044) 斜向「巳」右上方 (524,1068)
+holeStrip=c6&(YY<=1080)&(XX>=_xe-2)&(XX<=524.5)&(YY>=_yl)
+xStatic=xStatic|holeStrip
+upperO=(YY<1200)&((YY<1082)|(XX>521.5))   # 手臂片段多疊 3px 到「巳」上，避免邊對邊的細縫
 xArm  =c6&upperO&beyond(X['A'],X['t0'],-1)&~beyond(X['B'],X['t1'],1)
 xHand =c6&upper&beyond(X['B'],X['t1'],-1)&(XX>590)
 # ---- 伴 手臂：撇頂端 y≈784 以下到手腕 ----
@@ -88,10 +93,10 @@ _hd=(c2&cresO)|handleL
 _left=XX<790
 _hd=(ndimage.binary_opening(_hd,structure=np.ones((7,7)))&_left)|(_hd&~_left)   # 修掉左半的毛刺
 cane =(c2&shaft)|_hd
-win=ndimage.binary_fill_holes(c6)&~c6; wl,_=ndimage.label(win); win=wl==wl[1145,370]
+win=ndimage.binary_fill_holes(c6)&~c6; wl,_=ndimage.label(win); roofHole=wl==wl[1050,372]; win=wl==wl[1145,370]
 out={'paths':{'xiangTop':path(c(1)),'xiangStatic':path(xStatic),'xiangArm':path(xArm),'xiangHand':path(xHand),
   'banCap':path(bCap),'banArm':path(bArm),'banHand':path(bHand),'cane':path(cane),
-  'banMain':path(c(3)),'dot1':path(c(4)),'dot2':path(c(5)),'window':path(win)},
+  'banMain':path(c(3)),'dot1':path(c(4)),'dot2':path(c(5)),'window':path(win),'roofHole':path(ndimage.binary_erosion(roofHole,iterations=1))},
   'rig':{'xiang':X,'ban':B_}}
 # 巷的屋簷上緣（抬手時用來做隆起過渡）
 _A=np.array(X['A']); _t=np.array(X['t0']); _n=np.array([-_t[1],_t[0]]); _T0=_A-_n*X['w'][0]/2
