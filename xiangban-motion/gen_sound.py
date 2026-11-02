@@ -50,10 +50,10 @@ def lamp(tt):
     u=np.clip((tt-OFF[0])/OFF[1],0,1); return o*(1-u*u*(3-2*u))
 L=lamp(t)
 L=sosfilt(butter(1,60,'low',fs=SR,output='sos'),L)          # 讓亮度變化帶一點點慣性，避免爆音
-hum=sum(a*np.sin(2*np.pi*120*m*t+m) for m,a in [(1,1),(2,.5),(3,.35),(4,.18),(6,.08)])
-hum+=.25*sosfilt(butter(2,[2000,5000],'band',fs=SR,output='sos'),rng.standard_normal(len(t)))*(np.sin(2*np.pi*120*t)>0.6)   # 燈管的細碎嘶聲
-steady=np.where(t<2.3,1,0.35+0.65*np.exp(-(t-2.3)/0.5))       # 亮穩後嗡聲退到背景
-pan(.075*hum*L*steady,.42)
+hum=sum(a*np.sin(2*np.pi*120*m*t+m) for m,a in [(1,1),(2,.35),(3,.12)])   # 只留低沉的基音和兩個柔和泛音
+hum=sosfilt(butter(2,500,'low',fs=SR,output='sos'),hum)                      # 去掉刺耳高頻（不再有「滋滋」嘶聲）
+steady=np.where(t<2.3,1,0.25+0.75*np.exp(-(t-2.3)/0.4))       # 亮穩後嗡聲退到很遠的背景
+pan(.026*hum*L*steady,.42)
 on_times=[K[i][0] for i in range(len(K)-1) if K[i][1]<.3 and K[i+1][1]>=.3]
 for j,t0 in enumerate(on_times):                             # 啟動器「喀」：短促金屬聲＋一點低頻
     n=sosfilt(butter(2,1800,'high',fs=SR,output='sos'),rng.standard_normal(len(t)))
