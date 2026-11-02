@@ -39,9 +39,20 @@ def clasp_shift(K,t):  # 握住時兩手一起往上帶：越靠近相握處位�
     cx,cy=(705-380)*S,(1060-740)*S; d=np.hypot(xx-cx,yy-cy)/S
     w=np.clip((240-d)/120,0,1); w=w*w*(3-2*w)
     return ndimage.map_coordinates(K.astype(float),[yy+up*w,xx],order=1)>0.5
+SETTLE=(92,102)   # 最後 10 格：從計算出的手臂（第 92 格）以形狀漸變變成原稿（第 102 格）
 def clean(i, want_m=False):
     F=np.array(Image.open(f'cap/full_{i:03d}.png').convert('L'))<128
     M=np.array(Image.open(f'cap/mov_{i:03d}.png').convert('L'))<128
+    a,b=SETTLE
+    if i>a:
+        Fa=np.array(Image.open(f'cap/full_{a:03d}.png').convert('L'))<128
+        Ma=np.array(Image.open(f'cap/mov_{a:03d}.png').convert('L'))<128
+        Fb=np.array(Image.open(f'cap/full_{b:03d}.png').convert('L'))<128
+        u=min(1,(i-a)/(b-a)); u=u*u*(3-2*u)
+        R=ndimage.binary_dilation(Ma|(Fa^Fb),iterations=12)
+        v=(1-u)*sdf(Fa)+u*sdf(Fb); F=np.where(R,v>0,Fb)
+        M=(Ma|(Fa^Fb))&F if i<b else Ma&F
+        return (F,M) if want_m else F
     wk=key1_weight(i/30)
     if wk>0:   # 開頭：以設計稿第 1 張的輪廓為準，用距離場漸變到骨架
         K=key1_mask(F.shape); R=ndimage.binary_dilation(M,iterations=45)   # 只在兩隻手附近換成手稿輪廓
