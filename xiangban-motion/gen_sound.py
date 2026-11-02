@@ -37,11 +37,29 @@ for f in [261.63,329.63,392.0,587.33]:  # C E G D（加九度，溫暖）
     for det in (-.6,.6):
         pad+=np.sin(2*np.pi*(f+det)*t)+.3*np.sin(2*np.pi*2*(f+det)*t)
 pad=sosfilt(butter(2,1800,'low',fs=SR,output='sos'),pad)/14
-up=np.clip((t-1.62)/1.2,0,1); up=up*up*(3-2*up)
+up=np.clip((t-2.2)/1.0,0,1); up=up*up*(3-2*up)
 dn=1-np.clip((t-3.6)/.8,0,1); dn=dn*dn*(3-2*dn)
 pan(.16*pad*up*dn,.5)
-for i,(t0,f) in enumerate([(2.05,1567.98),(2.35,1318.5),(2.7,2093.0)]):   # 閃爍：G6 E6 C7
+for i,(t0,f) in enumerate([(2.45,1318.5),(2.8,2093.0)]):   # 閃爍：G6 E6 C7
     kalimba(t0,f,.035,.5,.3+.2*i)
+# 3b 日光燈：依 flicker.json 的亮度曲線，閃亮時「喀」一聲，亮著時有 120Hz 電流聲
+import json
+FL=json.load(open('flicker.json')); K=FL['keys']; OFF=FL['off']
+def lamp(tt):
+    o=np.interp(tt,[k[0] for k in K],[k[1] for k in K],left=0,right=K[-1][1])
+    u=np.clip((tt-OFF[0])/OFF[1],0,1); return o*(1-u*u*(3-2*u))
+L=lamp(t)
+L=sosfilt(butter(1,60,'low',fs=SR,output='sos'),L)          # 讓亮度變化帶一點點慣性，避免爆音
+hum=sum(a*np.sin(2*np.pi*120*m*t+m) for m,a in [(1,1),(2,.5),(3,.35),(4,.18),(6,.08)])
+hum+=.25*sosfilt(butter(2,[2000,5000],'band',fs=SR,output='sos'),rng.standard_normal(len(t)))*(np.sin(2*np.pi*120*t)>0.6)   # 燈管的細碎嘶聲
+steady=np.where(t<2.3,1,0.35+0.65*np.exp(-(t-2.3)/0.5))       # 亮穩後嗡聲退到背景
+pan(.075*hum*L*steady,.42)
+on_times=[K[i][0] for i in range(len(K)-1) if K[i][1]<.3 and K[i+1][1]>=.3]
+for j,t0 in enumerate(on_times):                             # 啟動器「喀」：短促金屬聲＋一點低頻
+    n=sosfilt(butter(2,1800,'high',fs=SR,output='sos'),rng.standard_normal(len(t)))
+    click=n*env(t0-.004,.0008,.006)+.6*np.sin(2*np.pi*(2400+300*j)*t)*env(t0-.004,.0005,.01)+.5*np.sin(2*np.pi*140*t)*env(t0-.004,.001,.03)
+    pan((.16 if j<len(on_times)-1 else .12)*click,.4)
+print('flicker on at',on_times)
 # 4 燈暗（3.6–4.4）：輕輕落下的兩個音，回到安靜
 kalimba(3.62,523.25,.09,1.0,.5)  # C5
 kalimba(3.95,392.0,.08,1.3,.5)   # G4
