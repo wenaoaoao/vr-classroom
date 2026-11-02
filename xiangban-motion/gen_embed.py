@@ -18,6 +18,7 @@ js=r'''/*!
  *   trigger="load"     開啟網頁就播放（預設：捲動到看得見時才播放）
  *   delay="0.3"        延遲幾秒才開始
  *   static             不播放動畫，直接顯示完成的標準字
+ *   sound              播放音效（瀏覽器規定：訪客點過頁面後才能出聲；還沒點過時動畫照常、靜音播放）
  * 顏色（CSS 變數，可寫在任何外層元素上）：
  *   --xiangban-ink: #634F44;        字色
  *   --xiangban-lamp-in: #FFF1D2;    窗燈中心
@@ -27,6 +28,7 @@ js=r'''/*!
  */
 (()=>{
 const SVG=__SVG__;
+const SND='data:audio/mpeg;base64,__SND__';
 const FR=__FRAMES__;
 const FPS=30, LAST=FR.length-1, END=LAST/FPS, LAMP=1.62, FADE=.45, OFF=3.6, TOTAL=4.5;
 const clamp=t=>Math.max(0,Math.min(1,t)), lerp=(a,b,t)=>a+(b-a)*t;
@@ -59,6 +61,7 @@ class XiangbanLogo extends HTMLElement{
   }
   play(){
     cancelAnimationFrame(this._raf); let t0=null;
+    if(this.hasAttribute('sound')){try{if(!this._audio)this._audio=new Audio(SND);this._audio.currentTime=0;const pr=this._audio.play();if(pr)pr.catch(()=>{});}catch(e){}}
     const step=now=>{if(t0===null)t0=now;const t=(now-t0)/1000;this._render(t);
       if(t<TOTAL)this._raf=requestAnimationFrame(step);else this.dispatchEvent(new Event('ended'));};
     this._raf=requestAnimationFrame(step);
@@ -68,6 +71,7 @@ class XiangbanLogo extends HTMLElement{
 if(!customElements.get('xiangban-logo'))customElements.define('xiangban-logo',XiangbanLogo);
 })();
 '''
-js=js.replace('__SVG__',json.dumps(svg,ensure_ascii=False)).replace('__FRAMES__',json.dumps(frames))
+import base64
+js=js.replace('__SND__',base64.b64encode(open('sound/xiangban.mp3','rb').read()).decode()).replace('__SVG__',json.dumps(svg,ensure_ascii=False)).replace('__FRAMES__',json.dumps(frames))
 open('embed/xiangban-logo.js','w',encoding='utf-8').write(js)
 print('xiangban-logo.js KB',len(js.encode())//1024)

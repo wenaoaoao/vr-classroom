@@ -67,6 +67,19 @@
 - `element.play()` 重新播放；播完會發出 `ended` 事件。
 - 範例：`embed/example.html`。更新動畫後執行 `python3 gen_embed.py` 重新產生。
 
+## 音效
+`sound/xiangban.wav`、`sound/xiangban.mp3`（5.2 秒，與動畫同步），由 `gen_sound.py` 合成，沒有版權問題。
+`xiangban-light-sound.mp4`、`xiangban-dark-sound.mp4` 是有聲版影片。
+
+| 秒 | 聲音 |
+|---|---|
+| 0.45 / 0.62 | 兩聲輕巧的拇指琴（長者、青年先後起步），襯著輕柔的氣流聲 |
+| 1.6 | 握住：木頭輕敲＋明亮的和音 |
+| 1.62–3.6 | 燈亮：溫暖的和弦慢慢鋪開，加上幾點閃爍 |
+| 3.6–4.4 | 燈暗：兩個輕輕落下的音，回到安靜 |
+
+網頁元件加 `sound` 屬性會播放音效。瀏覽器規定網頁不能一打開就出聲，訪客點過頁面後（例如按重播）才會有聲音。
+
 ## 重新產生
 ```bash
 pip install potracer scipy pillow numpy   # 另需 Node + Playwright
