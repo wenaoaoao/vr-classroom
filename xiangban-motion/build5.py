@@ -76,7 +76,7 @@ upperO=(YY<1200)&((YY<1082)|(XX>521.5))   # 手臂片段多疊 3px 到「巳」�
 xArm  =c6&upperO&beyond(X['A'],X['t0'],-1)&~beyond(X['B'],X['t1'],1)
 xHand =c6&upper&beyond(X['B'],X['t1'],-1)&(XX>590)
 # ---- 伴 手臂：撇頂端 y≈784 以下到手腕 ----
-bc=[((lambda xs:(xs.min()+xs.max())/2)(np.where(c2[y,640:900])[0]+640),y) for y in range(784,908,3)]
+bc=[((lambda xs:(xs.min()+xs.max())/2)(np.where(c2[y,640:900])[0]+640),y) for y in range(784,938,3)]
 B_=fit(bc,ndimage.distance_transform_edt(c2))
 shaft=(YY>1001)&(XX>760)
 cres=poly([(762,965),(845,928),(845,1001),(762,1001)])

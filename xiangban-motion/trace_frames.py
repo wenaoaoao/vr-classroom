@@ -2,7 +2,7 @@
 import numpy as np, json, potrace, sys
 from multiprocessing import Pool
 import clean
-Q=dict(x=380,y=740,w=575,h=480); S=3
+Q=dict(x=380,y=740,w=575,h=480); S=3; S_=S
 def path(mask):
     pl=potrace.Bitmap(~mask).trace(turdsize=40,alphamax=1.0,opticurve=True,opttolerance=0.3); out=[]
     f=lambda p:f"{p.x/S+Q['x']:.1f} {p.y/S+Q['y']:.1f}"
@@ -20,6 +20,8 @@ def job(i):
     F=np.array(Image.open(f'cap/full_{i:03d}.png').convert('L'))<128
     S=F&~M                                                     # 這一格的靜態筆畫
     staticOnly=ndimage.binary_dilation(S,iterations=4)&~ndimage.binary_dilation(M,iterations=6)
+    H_,W_=S.shape; yy,xx=np.mgrid[0:H_,0:W_]; lx=xx/S_+Q['x']; ly=yy/S_+Q['y']
+    staticOnly&=~((lx>735)&(lx<792)&(ly>935)&(ly<1010))   # 拐杖握把：兩手交會處，不做此裁切
     return path(C&ndimage.binary_dilation(M,iterations=24)&~staticOnly)
 if __name__=='__main__':
     n=int(sys.argv[1])

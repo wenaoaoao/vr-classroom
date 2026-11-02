@@ -1,5 +1,5 @@
 import json
-KEY=json.load(open('source/keys.json')); KEY['lift']=float(__import__('os').environ.get('LIFT',0)); KEY['lean']=float(__import__('os').environ.get('LEAN',3)); KEY['dy2']=float(__import__('os').environ.get('DY',4)); KEY['dx2']=float(__import__('os').environ.get('DX',0)); KEY['capW']=52.5
+KEY=json.load(open('source/keys.json')); KEY['lift']=float(__import__('os').environ.get('LIFT',0)); KEY['lean']=float(__import__('os').environ.get('LEAN',2)); KEY['dy2']=float(__import__('os').environ.get('DY',4)); KEY['dx2']=float(__import__('os').environ.get('DX',0)); KEY['capW']=52.5
 D=json.load(open('layers5.json')); P=D['paths']; R=D['rig']
 import numpy as np
 for k in R:  # 平滑寬度並補償像素取樣 (+1px)
