@@ -51,18 +51,18 @@ const clamp=t=>Math.max(0,Math.min(1,t)), lerp=(a,b,t)=>a+(b-a)*t;
 function cb(x1,y1,x2,y2){{return t=>{{if(t<=0)return 0;if(t>=1)return 1;let lo=0,hi=1,u=t;for(let i=0;i<30;i++){{u=(lo+hi)/2;const x=3*(1-u)*(1-u)*u*x1+3*(1-u)*u*u*x2+u*u*u;if(x<t)lo=u;else hi=u;}}return 3*(1-u)*(1-u)*u*y1+3*(1-u)*u*u*y2+u*u*u;}}}}
 const easeOut=cb(.16,1,.3,1), easeSoft=cb(.4,0,.3,1);
 const $=id=>document.getElementById(id);
-const LAMP=1.62, FADE=.45;
+const LAMP=1.62, FADE=.45, OFF=3.6;
 function render(t){{
   $('all').setAttribute('opacity',easeOut(clamp(t/FADE)));
   const done=t>=END;
   $('play').style.display=done?'none':''; $('rest').style.display=done?'':'none';
   if(!done)$('frame').setAttribute('d',FR[Math.min(LAST,Math.round(t*FPS))]);
   const l=t-LAMP; let o=0;
-  if(l>0){{o=l<.45?.6*easeSoft(l/.45):l<.65?lerp(.6,.5,(l-.45)/.2):lerp(.5,1,easeOut(clamp((l-.65)/.75)));}}
+  if(l>0){{o=l<.45?.6*easeSoft(l/.45):l<.65?lerp(.6,.5,(l-.45)/.2):lerp(.5,1,easeOut(clamp((l-.65)/.75)))*(1-easeSoft(clamp((t-OFF)/.8)));}}
   $('lamp').setAttribute('opacity',o);
 }}
 let t0=null,raf=null;
-function frame(now){{if(t0===null)t0=now;const t=(now-t0)/1000;render(t);if(t<4.4)raf=requestAnimationFrame(frame);}}
+function frame(now){{if(t0===null)t0=now;const t=(now-t0)/1000;render(t);if(t<4.5)raf=requestAnimationFrame(frame);}}
 function play(){{cancelAnimationFrame(raf);t0=null;raf=requestAnimationFrame(frame);}}
 window.seek=t=>{{cancelAnimationFrame(raf);render(t);}};
 const q=new URLSearchParams(location.search);
