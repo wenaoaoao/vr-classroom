@@ -53,12 +53,13 @@ L=sosfilt(butter(1,60,'low',fs=SR,output='sos'),L)          # 讓亮度變化帶
 hum=sum(a*np.sin(2*np.pi*120*m*t+m) for m,a in [(1,1),(2,.35),(3,.12)])   # 只留低沉的基音和兩個柔和泛音
 hum=sosfilt(butter(2,500,'low',fs=SR,output='sos'),hum)                      # 去掉刺耳高頻（不再有「滋滋」嘶聲）
 steady=np.where(t<2.3,1,0.25+0.75*np.exp(-(t-2.3)/0.4))       # 亮穩後嗡聲退到很遠的背景
-pan(.026*hum*L*steady,.42)
+# 電流嗡聲已拿掉（聽起來嚇人）
 on_times=[K[i][0] for i in range(len(K)-1) if K[i][1]<.3 and K[i+1][1]>=.3]
-for j,t0 in enumerate(on_times):                             # 啟動器「喀」：短促金屬聲＋一點低頻
-    n=sosfilt(butter(2,1800,'high',fs=SR,output='sos'),rng.standard_normal(len(t)))
-    click=n*env(t0-.004,.0008,.006)+.6*np.sin(2*np.pi*(2400+300*j)*t)*env(t0-.004,.0005,.01)+.5*np.sin(2*np.pi*140*t)*env(t0-.004,.001,.03)
-    pan((.16 if j<len(on_times)-1 else .12)*click,.4)
+for j,t0 in enumerate(on_times):                             # 開關聲：圓潤、小聲的「嗒」，像家裡的電燈開關
+    n=sosfilt(butter(2,[700,2200],'band',fs=SR,output='sos'),rng.standard_normal(len(t)))
+    tick=.5*n*env(t0-.004,.001,.008)+np.sin(2*np.pi*(520-20*j)*t)*env(t0-.004,.001,.035)
+    tick=sosfilt(butter(2,2500,'low',fs=SR,output='sos'),tick)
+    pan((.07 if j<len(on_times)-1 else .06)*tick,.4)
 print('flicker on at',on_times)
 # 4 燈暗（3.6–4.4）：輕輕落下的兩個音，回到安靜
 kalimba(3.62,523.25,.09,1.0,.5)  # C5
