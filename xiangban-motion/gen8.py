@@ -1,5 +1,7 @@
 # 產生逐格向量播放版 index.html
 import json
+from intro_js import make as _mk
+IDEFS,IJS,IE=_mk()
 L=json.load(open('layers5.json'))['paths']; F=json.load(open('frames.json')); Q=F['Q']
 inset=3
 clip=f"M0 0H1400V2000H0Z M{Q['x']+inset} {Q['y']+inset}V{Q['y']+Q['h']-inset}H{Q['x']+Q['w']-inset}V{Q['y']+inset}Z"
@@ -30,7 +32,7 @@ html=f'''<!DOCTYPE html>
 <svg id="logo" viewBox="40 700 1300 670" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="巷伴">
   <defs>
     <clipPath id="outsideQ" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="{clip}"/></clipPath>
-    <radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--lampIn)"/><stop offset="1" stop-color="var(--lampOut)"/></radialGradient>
+    @@IDEFS@@<radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--lampIn)"/><stop offset="1" stop-color="var(--lampOut)"/></radialGradient>
   </defs>
   <g id="all">
     <g id="play">{static}<path id="frame"/></g>
@@ -54,7 +56,7 @@ const $=id=>document.getElementById(id);
 const FADE=.45; const FLK={json.dumps(json.load(open('flicker.json'))['keys'])}, FLOFF={json.dumps(json.load(open('flicker.json'))['off'])};
 function lampAt(t){{const K=FLK;let o=0;if(t>=K[0][0]){{o=K[K.length-1][1];for(let i=0;i<K.length-1;i++){{if(t<K[i+1][0]){{const u=(t-K[i][0])/(K[i+1][0]-K[i][0]);o=K[i][1]+(K[i+1][1]-K[i][1])*(i===K.length-2?easeOut(u):u);break;}}}}}}return o*(1-easeSoft(clamp((t-FLOFF[0])/FLOFF[1])));}}
 function popAt(t){{const a=1.72,p=1.9,b=2.5;if(t<=a||t>=b)return 1;const u=t<p?easeOut((t-a)/(p-a)):1-easeSoft((t-p)/(b-p));return 1+.045*u;}}
-function render(t){{
+function renderMain(t){{
   $('all').setAttribute('opacity',easeOut(clamp(t/FADE)));
   const sc=popAt(t); $('all').setAttribute('transform',`translate(690 1035) scale(${{sc}}) translate(-690 -1035)`);
   const done=t>=END;
@@ -62,8 +64,16 @@ function render(t){{
   if(!done)$('frame').setAttribute('d',FR[Math.min(LAST,Math.round(t*FPS))]);
   $('lamp').setAttribute('opacity',lampAt(t));
 }}
+@@IJS@@
+/* 開頭：先像被寫出來一樣依筆順出現，兩隻手最後長出來，接著接上主動畫 */
+const IE=XBI.end;
+function render(t){{
+  if(t<IE){{ renderMain(0); $('all').setAttribute('mask','url(#writeMask)'); xbIntro($,t); }}
+  else {{ $('all').removeAttribute('mask'); renderMain(t-IE); }}
+  $('all').setAttribute('opacity',1);
+}}
 let t0=null,raf=null;
-function frame(now){{if(t0===null)t0=now;const t=(now-t0)/1000;render(t);if(t<5.4)raf=requestAnimationFrame(frame);}}
+function frame(now){{if(t0===null)t0=now;const t=(now-t0)/1000;render(t);if(t<5.4+IE)raf=requestAnimationFrame(frame);}}
 function play(){{cancelAnimationFrame(raf);t0=null;raf=requestAnimationFrame(frame);}}
 window.seek=t=>{{cancelAnimationFrame(raf);render(t);}};
 const q=new URLSearchParams(location.search);
@@ -72,4 +82,5 @@ if(matchMedia('(prefers-reduced-motion: reduce)').matches) render(99); else {{re
 </script>
 </body>
 </html>'''
+html=html.replace('@@IDEFS@@',IDEFS).replace('@@IJS@@',IJS)
 open('index.html','w').write(html); print('KB',len(html)//1024)
