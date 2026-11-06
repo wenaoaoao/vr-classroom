@@ -2,7 +2,7 @@
 import numpy as np
 from scipy.signal import butter, sosfilt
 from scipy.io import wavfile
-SR=48000; DUR=5.2
+SR=48000; DUR=6.0
 t=np.arange(int(SR*DUR))/SR
 out=np.zeros((len(t),2))
 def env(t0,a,d,tt=t):   # 指數衰減包絡，a 秒起音
@@ -29,18 +29,21 @@ kalimba(.45,659.25,.10,.6,.66)   # E5 長者先
 kalimba(.62,587.33,.09,.6,.34)   # D5 青年跟上
 # 2 握住（1.6 秒）：木頭輕敲＋明亮的拇指琴和音
 wood(1.60,190,.32,.5)
-kalimba(1.61,783.99,.20,1.1,.45) # G5
-kalimba(1.63,1046.5,.12,1.0,.55) # C6
+kalimba(1.86,783.99,.20,1.1,.45) # G5  握緊
+kalimba(1.88,1046.5,.12,1.0,.55) # C6
+for tp in (1.97,2.33):                # 握手搖兩下：每下一聲圓潤的低音「咚」
+    pan(.22*np.sin(2*np.pi*130*t)*env(tp,.006,.10),.5)
+    kalimba(tp+.01,392.0 if tp<2.2 else 440.0,.07,.5,.5)
 # 3 燈亮（1.62–3.0）：溫暖的和弦鋪底慢慢亮起，加上一點閃爍
 pad=np.zeros(len(t))
 for f in [261.63,329.63,392.0,587.33]:  # C E G D（加九度，溫暖）
     for det in (-.6,.6):
         pad+=np.sin(2*np.pi*(f+det)*t)+.3*np.sin(2*np.pi*2*(f+det)*t)
 pad=sosfilt(butter(2,1800,'low',fs=SR,output='sos'),pad)/14
-up=np.clip((t-2.2)/1.0,0,1); up=up*up*(3-2*up)
-dn=1-np.clip((t-3.6)/.8,0,1); dn=dn*dn*(3-2*dn)
+up=np.clip((t-2.45)/1.0,0,1); up=up*up*(3-2*up)
+dn=1-np.clip((t-4.3)/.8,0,1); dn=dn*dn*(3-2*dn)
 pan(.16*pad*up*dn,.5)
-for i,(t0,f) in enumerate([(2.45,1318.5),(2.8,2093.0)]):   # 閃爍：G6 E6 C7
+for i,(t0,f) in enumerate([(2.85,1318.5),(3.2,2093.0)]):   # 閃爍：G6 E6 C7
     kalimba(t0,f,.035,.5,.3+.2*i)
 # 3b 日光燈：依 flicker.json 的亮度曲線，閃亮時「喀」一聲，亮著時有 120Hz 電流聲
 import json
@@ -62,8 +65,8 @@ for j,t0 in enumerate(on_times):                             # 開關聲：圓�
     pan((.07 if j<len(on_times)-1 else .06)*tick,.4)
 print('flicker on at',on_times)
 # 4 燈暗（3.6–4.4）：輕輕落下的兩個音，回到安靜
-kalimba(3.62,523.25,.09,1.0,.5)  # C5
-kalimba(3.95,392.0,.08,1.3,.5)   # G4
+kalimba(4.32,523.25,.09,1.0,.5)  # C5
+kalimba(4.65,392.0,.08,1.3,.5)   # G4
 # 收尾：輕微殘響
 def reverb(x):
     y=x.copy()

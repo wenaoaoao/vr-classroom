@@ -53,15 +53,17 @@ const easeOut=cb(.16,1,.3,1), easeSoft=cb(.4,0,.3,1);
 const $=id=>document.getElementById(id);
 const FADE=.45; const FLK={json.dumps(json.load(open('flicker.json'))['keys'])}, FLOFF={json.dumps(json.load(open('flicker.json'))['off'])};
 function lampAt(t){{const K=FLK;let o=0;if(t>=K[0][0]){{o=K[K.length-1][1];for(let i=0;i<K.length-1;i++){{if(t<K[i+1][0]){{const u=(t-K[i][0])/(K[i+1][0]-K[i][0]);o=K[i][1]+(K[i+1][1]-K[i][1])*(i===K.length-2?easeOut(u):u);break;}}}}}}return o*(1-easeSoft(clamp((t-FLOFF[0])/FLOFF[1])));}}
+function popAt(t){{const a=1.72,p=1.9,b=2.5;if(t<=a||t>=b)return 1;const u=t<p?easeOut((t-a)/(p-a)):1-easeSoft((t-p)/(b-p));return 1+.045*u;}}
 function render(t){{
   $('all').setAttribute('opacity',easeOut(clamp(t/FADE)));
+  const sc=popAt(t); $('all').setAttribute('transform',`translate(690 1035) scale(${{sc}}) translate(-690 -1035)`);
   const done=t>=END;
   $('play').style.display=done?'none':''; $('rest').style.display=done?'':'none';
   if(!done)$('frame').setAttribute('d',FR[Math.min(LAST,Math.round(t*FPS))]);
   $('lamp').setAttribute('opacity',lampAt(t));
 }}
 let t0=null,raf=null;
-function frame(now){{if(t0===null)t0=now;const t=(now-t0)/1000;render(t);if(t<4.5)raf=requestAnimationFrame(frame);}}
+function frame(now){{if(t0===null)t0=now;const t=(now-t0)/1000;render(t);if(t<5.4)raf=requestAnimationFrame(frame);}}
 function play(){{cancelAnimationFrame(raf);t0=null;raf=requestAnimationFrame(frame);}}
 window.seek=t=>{{cancelAnimationFrame(raf);render(t);}};
 const q=new URLSearchParams(location.search);

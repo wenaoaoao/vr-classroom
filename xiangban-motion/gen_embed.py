@@ -30,12 +30,13 @@ js=r'''/*!
 const SVG=__SVG__;
 const SND='data:audio/mpeg;base64,__SND__';
 const FR=__FRAMES__;
-const FPS=30, LAST=FR.length-1, END=LAST/FPS, FADE=.45, TOTAL=4.5;
+const FPS=30, LAST=FR.length-1, END=LAST/FPS, FADE=.45, TOTAL=5.4;
 const FLK=__FLK__, FLOFF=__FLOFF__;
 const clamp=t=>Math.max(0,Math.min(1,t)), lerp=(a,b,t)=>a+(b-a)*t;
 function cb(x1,y1,x2,y2){return t=>{if(t<=0)return 0;if(t>=1)return 1;let lo=0,hi=1,u=t;for(let i=0;i<30;i++){u=(lo+hi)/2;const x=3*(1-u)*(1-u)*u*x1+3*(1-u)*u*u*x2+u*u*u;if(x<t)lo=u;else hi=u;}return 3*(1-u)*(1-u)*u*y1+3*(1-u)*u*u*y2+u*u*u;}}
 const easeOut=cb(.16,1,.3,1), easeSoft=cb(.4,0,.3,1);
 function lampAt(t){const K=FLK;let o=0;if(t>=K[0][0]){o=K[K.length-1][1];for(let i=0;i<K.length-1;i++){if(t<K[i+1][0]){const u=(t-K[i][0])/(K[i+1][0]-K[i][0]);o=K[i][1]+(K[i+1][1]-K[i][1])*(i===K.length-2?easeOut(u):u);break;}}}return o*(1-easeSoft(clamp((t-FLOFF[0])/FLOFF[1])));}
+function popAt(t){const a=1.72,p=1.9,b=2.5;if(t<=a||t>=b)return 1;const u=t<p?easeOut((t-a)/(p-a)):1-easeSoft((t-p)/(b-p));return 1+.045*u;}
 class XiangbanLogo extends HTMLElement{
   connectedCallback(){
     if(this._init)return; this._init=true;
@@ -54,6 +55,7 @@ class XiangbanLogo extends HTMLElement{
   _render(t){
     const e=this._el;
     e.all.setAttribute('opacity',easeOut(clamp(t/FADE)));
+    const sc=popAt(t); e.all.setAttribute('transform',`translate(690 1035) scale(${sc}) translate(-690 -1035)`);
     const done=t>=END;
     e.play.style.display=done?'none':''; e.rest.style.display=done?'':'none';
     if(!done)e.frame.setAttribute('d',FR[Math.min(LAST,Math.round(t*FPS))]);

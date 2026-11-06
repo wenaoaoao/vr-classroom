@@ -6,7 +6,7 @@ import json, os
 J=json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'cap','joints.json'))) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)),'cap','joints.json')) else None
 def sigma_for(i,fps=30):
     t=i/fps
-    return 4.5 if t<2.7 else max(0.0,4.5*(3.0-t)/0.3)      # 鬆開快結束時逐漸停止平滑
+    return 4.5 if t<3.4 else max(0.0,4.5*(3.7-t)/0.3)      # 鬆開快結束時逐漸停止平滑
 # 設計稿第 1 張（精準對位後）在 Q 區域、3 倍解析度下的輪廓
 _K={}
 def key_mask(n,shape):
@@ -14,10 +14,14 @@ def key_mask(n,shape):
         base=os.path.dirname(os.path.abspath(__file__))
         fn=f'key{n}reg.json'
         reg=json.load(open(os.path.join(base,'source',fn) if os.path.exists(os.path.join(base,'source',fn)) else os.path.join(base,fn)))
-        src=Image.open(os.path.join(base,'source','keyposes.jpg') if os.path.exists(os.path.join(base,'source','keyposes.jpg')) else 'source/keyposes.jpg').convert('L')
+        src=Image.open(os.path.join(base,'source',reg.get('src','keyposes.jpg'))).convert('L')
         Qx,Qy=380,740; s,ox,oy=reg['s'],reg['ox'],reg['oy']; H,W=shape
         g=np.array(src.transform((W,H),Image.AFFINE,(s/S,0,Qx*s+ox,0,s/S,Qy*s+oy),resample=Image.BICUBIC,fillcolor=255)).astype(float)
-        _K[n]=ndimage.gaussian_filter(g,1.2)<128
+        m=ndimage.gaussian_filter(g,1.2)<128
+        holes=ndimage.binary_fill_holes(m)&~m; hl,nh=ndimage.label(holes)       # 填掉掃描留下的小白點（大於 900 的洞是字形本身的空間，保留）
+        if nh:
+            sz=ndimage.sum(holes,hl,range(1,nh+1)); m|=np.isin(hl,np.where(sz<900)[0]+1)
+        _K[n]=m
     return _K[n]
 def key1_mask(shape): return key_mask(1,shape)
 def feather(R):
@@ -27,19 +31,32 @@ def key1_weight(t):  # 0.45 秒前完全用手稿，0.75 秒前漸變到骨架
     if t<=.45: return 1.0
     if t>=.75: return 0.0
     u=(t-.45)/.30; return 1-u*u*(3-2*u)
-def key2_weight(t):   # 握住期間用設計稿第 2 張
-    if t<1.2 or t>2.6: return 0.0
-    if t<1.6: u=(t-1.2)/.4; return u*u*(3-2*u)
-    if t<=2.2: return 1.0
-    u=(t-2.2)/.4; return 1-u*u*(3-2*u)
-def clasp_shift(K,t):  # 握住時兩手一起往上帶：越靠近相握處位移越多，手臂根部不動
-    c=min(1,max(0,(t-1.5)/0.7)); b=(1-np.cos(2*np.pi*c))/2; up=5.0*b*S
-    if up<0.05: return K
+# 握手段落（設計稿 2→3→4）：1.2–1.6 漸入，1.6–2.9 完全用手稿，2.9–3.3 漸出回到動畫
+CL=dict(touch=1.6, grip=1.85, shake=(1.85,2.65), loosen=(2.65,2.9), out=(2.9,3.3), amp=14.0)
+def key2_weight(t):
+    if t<1.2 or t>CL['out'][1]: return 0.0
+    if t<CL['touch']: u=(t-1.2)/.4; return u*u*(3-2*u)
+    if t<=CL['out'][0]: return 1.0
+    u=(t-CL['out'][0])/(CL['out'][1]-CL['out'][0]); return 1-u*u*(3-2*u)
+def _mix(A,B,u):
+    u=u*u*(3-2*u); return ((1-u)*sdf(A)+u*sdf(B))>0
+def key_target(t,shape):
+    K2,K3,K4=key_mask(2,shape),key_mask(3,shape),key_mask(4,shape)
+    if t<=CL['touch']: return K2
+    if t<CL['grip']: return _mix(K2,K3,(t-CL['touch'])/(CL['grip']-CL['touch']))      # 碰到 → 握緊
+    if t<=CL['loosen'][0]: return K3
+    if t<CL['loosen'][1]: return _mix(K3,K4,(t-CL['loosen'][0])/(CL['loosen'][1]-CL['loosen'][0]))   # 鬆開
+    return K4
+def clasp_shift(K,t):  # 握手：握緊後上下搖兩下，越靠近相握處位移越多，手臂根部不動
+    a,b=CL['shake']
+    if t<=a or t>=b: return K
+    c=(t-a)/(b-a); dy=CL['amp']*np.sin(4*np.pi*c)*np.sin(np.pi*c)*S
     H_,W_=K.shape; yy,xx=np.mgrid[0:H_,0:W_]
-    cx,cy=(705-380)*S,(1060-740)*S; d=np.hypot(xx-cx,yy-cy)/S
+    cx,cy=(715-380)*S,(1065-740)*S; d=np.hypot(xx-cx,yy-cy)/S
     w=np.clip((240-d)/120,0,1); w=w*w*(3-2*w)
-    return ndimage.map_coordinates(K.astype(float),[yy+up*w,xx],order=1)>0.5
-SETTLE=(92,102)   # 最後 10 格：從計算出的手臂（第 92 格）以形狀漸變變成原稿（第 102 格）
+    ly=yy/S+740; wy=np.clip((ly-1000)/45,0,1); w*=wy*wy*(3-2*wy)       # 只搖握把高度以下的兩隻手，撇與握把不動
+    return ndimage.map_coordinates(K.astype(float),[yy-dy*w,xx],order=1)>0.5
+SETTLE=(113,123)  # 最後 10 格：從計算出的手臂（第 113 格）以形狀漸變變成原稿（第 123 格）
 def clean(i, want_m=False):
     F=np.array(Image.open(f'cap/full_{i:03d}.png').convert('L'))<128
     M=np.array(Image.open(f'cap/mov_{i:03d}.png').convert('L'))<128
@@ -63,7 +80,7 @@ def clean(i, want_m=False):
         M=M|(R&F)
     w2=key2_weight(i/30)
     if w2>0:
-        K2=clasp_shift(key_mask(2,F.shape),i/30); R2=ndimage.binary_dilation(M|K2&ndimage.binary_dilation(M,iterations=45),iterations=90)
+        K2=clasp_shift(key_target(i/30,F.shape),i/30); R2=ndimage.binary_dilation(M|K2&ndimage.binary_dilation(M,iterations=45),iterations=90)
         H_,W_=F.shape; yy,xx=np.mgrid[0:H_,0:W_]; lx=xx/S+380; ly=yy/S+740
         R2&=~(((ly>=1079)&(lx<=524.5)) | ((ly<1079)&(lx<446+(ly-1042)*0.889)&(ly>1000)))
         _hy=np.interp(lx,[757,782,800,845],[972,962,946,925])   # 握把上緣線（與 build5 的握把範圍相同）

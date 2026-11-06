@@ -1,6 +1,6 @@
 // 逐格渲染手部區域 Q（原稿座標），各輸出「完整畫面」與「只有移動部分」兩張
 const {chromium}=require('playwright');
-const Q={x:380,y:740,w:575,h:480}, S=3, FPS=30, T_END=3.4;
+const Q={x:380,y:740,w:575,h:480}, S=3, FPS=30, T_END=4.1;
 (async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:Q.w*S,height:Q.h*S}});
 await p.goto('file://'+require('path').resolve('rig.html')+'?capture');await p.waitForTimeout(300);
 await p.evaluate(Q=>{const s=document.getElementById('logo');s.setAttribute('viewBox',`${Q.x} ${Q.y} ${Q.w} ${Q.h}`);

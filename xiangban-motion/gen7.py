@@ -68,7 +68,7 @@ html='''<!DOCTYPE html>
 const RIG=@rig;
 /* ================= 時間軸（秒）=================
    依設計者的三張關鍵姿勢：1 收起 → 2 伸手相握 → 3 鬆開回到標準字 */
-const T={fade:[0,.45], release:[2.25,3.1], lamp:1.62, end:4.4};
+const T={fade:[0,.45], release:[2.95,3.8], lamp:1.62, end:5.2};
 const KEY=@keys;   // 由設計稿量出的手腕位置 P 與手掌角度 ang
 /* ---------- 工具 ---------- */
 const lerp=(a,b,t)=>a+(b-a)*t, clamp=t=>Math.max(0,Math.min(1,t));
@@ -135,9 +135,9 @@ const smooth=x=>x*x*(3-2*x);
    伸手：沿路徑（以弧長均分）加速、減速，1.6 秒兩手同時接觸。
    握住：抵達前 0.1 秒就開始，兩手一起往上帶一下再落回（與抵達重疊，不會停頓）。
    鬆開：長者先放，青年晚 0.08 秒，結尾帶一點點回彈。 */
-const M={contact:1.6, clasp:[1.5,2.2], up:5, tilt:1.5,
-  ban:{start:.45, ease:cb(.42,0,.28,1), rel:[2.2,3.0]},
-  xiang:{start:.55, ease:cb(.42,0,.28,1), rel:[2.28,3.05]}};
+const M={contact:1.6, clasp:[1.5,2.2], up:0, tilt:0,
+  ban:{start:.45, ease:cb(.42,0,.28,1), rel:[2.9,3.7]},
+  xiang:{start:.55, ease:cb(.42,0,.28,1), rel:[2.98,3.75]}};
 const easeRel=cb(.35,0,.2,1.06);
 function arcTable(fn){ // 弧長重新取樣，讓 s 均勻對應距離
   const N=200,pts=[],acc=[0]; for(let i=0;i<=N;i++)pts.push(fn(i/N));
