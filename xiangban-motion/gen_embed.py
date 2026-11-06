@@ -9,9 +9,6 @@ frames=json.loads(re.search(r'const FR=(\[.*?\]);',h,re.S).group(1))
 svg=f'''<svg viewBox="40 700 1300 670" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="巷伴" part="svg">
 <defs><radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--xiangban-lamp-in,#FFF1D2)"/><stop offset="1" stop-color="var(--xiangban-lamp-out,#F2CB86)"/></radialGradient></defs>
 <g id="all"><g id="play">{static}<path id="frame"/></g><g id="rest" style="display:none">{rest}</g><path id="lamp" d="{lamp}" opacity="0"/></g></svg>'''
-from intro_js import make as _mk
-IDEFS,IJS,IE=_mk()
-svg=svg.replace('<defs><radialGradient','<defs>'+IDEFS+'<radialGradient',1)
 js=r'''/*!
  * 巷伴 動態標準字 <xiangban-logo>
  * 用法：
@@ -33,8 +30,7 @@ js=r'''/*!
 const SVG=__SVG__;
 const SND='data:audio/mpeg;base64,__SND__';
 const FR=__FRAMES__;
-const FPS=30, LAST=FR.length-1, END=LAST/FPS, FADE=.45, TOTAL=5.4+__IE__;
-__IJS__
+const FPS=30, LAST=FR.length-1, END=LAST/FPS, FADE=.45, TOTAL=5.4;
 const FLK=__FLK__, FLOFF=__FLOFF__;
 const clamp=t=>Math.max(0,Math.min(1,t)), lerp=(a,b,t)=>a+(b-a)*t;
 function cb(x1,y1,x2,y2){return t=>{if(t<=0)return 0;if(t>=1)return 1;let lo=0,hi=1,u=t;for(let i=0;i<30;i++){u=(lo+hi)/2;const x=3*(1-u)*(1-u)*u*x1+3*(1-u)*u*u*x2+u*u*u;if(x<t)lo=u;else hi=u;}return 3*(1-u)*(1-u)*u*y1+3*(1-u)*u*u*y2+u*u*u;}}
@@ -46,7 +42,7 @@ class XiangbanLogo extends HTMLElement{
     if(this._init)return; this._init=true;
     const root=this.attachShadow({mode:'open'});
     root.innerHTML='<style>:host{display:inline-block;width:100%;max-width:1000px;line-height:0}svg{width:100%;height:auto;overflow:visible}path{fill:var(--xiangban-ink,#634F44)}#lamp{fill:url(#lampG)}</style>'+SVG;
-    const q=s=>root.getElementById(s); this._q=q;
+    const q=s=>root.getElementById(s);
     this._el={all:q('all'),play:q('play'),rest:q('rest'),frame:q('frame'),lamp:q('lamp')};
     const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(this.hasAttribute('static')||reduce){this._render(99);return;}
@@ -56,13 +52,7 @@ class XiangbanLogo extends HTMLElement{
     const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){io.disconnect();go();}},{threshold:.4});
     io.observe(this);
   }
-  _render(t){   // 開頭先依筆順寫出來、兩隻手最後長出，再接主動畫
-    const a=this._el.all;
-    if(t<__IE__){this._renderMain(0);a.setAttribute('mask','url(#writeMask)');xbIntro(this._q,t);}
-    else{a.removeAttribute('mask');this._renderMain(t-__IE__);}
-    a.setAttribute('opacity',1);
-  }
-  _renderMain(t){
+  _render(t){
     const e=this._el;
     e.all.setAttribute('opacity',easeOut(clamp(t/FADE)));
     const sc=popAt(t); e.all.setAttribute('transform',`translate(690 1035) scale(${sc}) translate(-690 -1035)`);
@@ -86,7 +76,6 @@ if(!customElements.get('xiangban-logo'))customElements.define('xiangban-logo',Xi
 import base64
 FL=json.load(open('flicker.json'))
 js=js.replace('__FLK__',json.dumps(FL['keys'])).replace('__FLOFF__',json.dumps(FL['off']))
-js=js.replace('__IJS__',IJS).replace('__IE__',str(IE))
 js=js.replace('__SND__',base64.b64encode(open('sound/xiangban.mp3','rb').read()).decode()).replace('__SVG__',json.dumps(svg,ensure_ascii=False)).replace('__FRAMES__',json.dumps(frames))
 open('embed/xiangban-logo.js','w',encoding='utf-8').write(js)
 print('xiangban-logo.js KB',len(js.encode())//1024)

@@ -76,25 +76,5 @@ def reverb(x):
 out[:,0]=reverb(out[:,0]); out[:,1]=reverb(out[:,1])
 fade=np.clip((DUR-t)/.4,0,1); out*=fade[:,None]
 out/=np.abs(out).max()/0.8
-# 開頭書寫：每一筆一段輕柔的「刷」聲（像毛筆掃過紙），兩隻手長出時各一聲輕巧的拇指琴
-I=json.load(open('intro.json')); IE=I['end']; n0=int(round(IE*SR))
-fin=np.zeros((n0+len(out),2)); fin[n0:]=out
-ti=np.arange(len(fin))/SR
-rng2=np.random.default_rng(11)
-for k,st in enumerate(I['strokes']):
-    a,b=st['t0'],st['t1']; d=b-a
-    nz=sosfilt(butter(2,[500,2600],'band',fs=SR,output='sos'),rng2.standard_normal(len(fin)))
-    u=np.clip((ti-a)/d,0,1); e=np.sin(np.pi*u)**1.5*((ti>=a)&(ti<=b))
-    e*=1+.25*np.sin(2*np.pi*(9+k%3)*ti)               # 一點點筆觸的抖動
-    p=.35+.3*((k%5)/4)
-    fin[:,0]+=.15*nz*e*np.sqrt(1-p); fin[:,1]+=.15*nz*e*np.sqrt(p)
-for j,h in enumerate(I['hands']):
-    f=880.0 if j==0 else 783.99
-    tt=ti-h['t0']; ev=np.where(tt<0,0,np.where(tt<.004,tt/.004,np.exp(-(tt-.004)/.5)))
-    sig=.09*ev*(np.sin(2*np.pi*f*ti)+.25*np.sin(2*np.pi*2*f*ti))
-    fin[:,0]+=sig*(.65 if j==0 else .35); fin[:,1]+=sig*(.35 if j==0 else .65)
-pk=np.abs(fin).max()
-if pk>0.95: fin*=0.95/pk
-wavfile.write('sound/xiangban.wav',SR,(fin*32767).astype(np.int16))
-print('含開頭',round(len(fin)/SR,2),'秒')
+wavfile.write('sound/xiangban.wav',SR,(out*32767).astype(np.int16))
 print('ok',DUR,'s')
