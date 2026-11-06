@@ -55,10 +55,7 @@ const $=id=>document.getElementById(id);
 const FADE=.45; const FLK={json.dumps(json.load(open('flicker.json'))['keys'])}, FLOFF={json.dumps(json.load(open('flicker.json'))['off'])};
 function lampAt(t){{const K=FLK;let o=0;if(t>=K[0][0]){{o=K[K.length-1][1];for(let i=0;i<K.length-1;i++){{if(t<K[i+1][0]){{const u=(t-K[i][0])/(K[i+1][0]-K[i][0]);o=K[i][1]+(K[i+1][1]-K[i][1])*(i===K.length-2?easeOut(u):u);break;}}}}}}return o*(1-easeSoft(clamp((t-FLOFF[0])/FLOFF[1])));}}
 function popAt(t){{const a=1.72,p=1.9,b=2.5;if(t<=a||t>=b)return 1;const u=t<p?easeOut((t-a)/(p-a)):1-easeSoft((t-p)/(b-p));return 1+.045*u;}}
-function feetAt(t){{const f=1.5,w=2*Math.PI*f;let A=9*easeSoft(clamp((t-.2)/.5));
-A*=1+.6*Math.sin(Math.PI*clamp((t-1.75)/1.1));            /* 握住時晃得更開心 */
-A*=1-easeSoft(clamp((t-3.0)/1.4));                        /* 收回後慢慢停下 */
-return [A*Math.sin(w*t), A*Math.sin(w*t+Math.PI*.8)];}}
+function feetAt(t){{const a=1.8,b=2.9;if(t<=a||t>=b)return [0,0];const u=(t-a)/(b-a),w=2*Math.PI*1.8,A=11*Math.pow(Math.sin(Math.PI*u),1.5);return [A*Math.sin(w*(t-a)), A*Math.sin(w*(t-a)+Math.PI*.8)];}}
 function render(t){{
   $('all').setAttribute('opacity',easeOut(clamp(t/FADE)));
   const ft=feetAt(t); $('dot1').setAttribute('transform',`rotate(${{ft[0].toFixed(2)}} 943 766)`); $('dot2').setAttribute('transform',`rotate(${{ft[1].toFixed(2)}} 1220 775)`);
