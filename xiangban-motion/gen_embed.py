@@ -4,11 +4,12 @@ h=open('index.html',encoding='utf-8').read()
 grp=lambda gid: re.search(r'<g id="%s"[^>]*>(.*?)</g>'%gid,h,re.S).group(1)
 static=re.sub(r'<path id="frame"/>','',grp('play'))
 rest=grp('rest')
+dots=re.search(r'<g id="dots">(.*?)</g>',h,re.S).group(1)
 lamp=re.search(r'<path id="lamp" d="([^"]+)"',h).group(1)
 frames=json.loads(re.search(r'const FR=(\[.*?\]);',h,re.S).group(1))
 svg=f'''<svg viewBox="40 700 1300 670" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="巷伴" part="svg">
 <defs><radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--xiangban-lamp-in,#FFF1D2)"/><stop offset="1" stop-color="var(--xiangban-lamp-out,#F2CB86)"/></radialGradient></defs>
-<g id="all"><g id="play">{static}<path id="frame"/></g><g id="rest" style="display:none">{rest}</g><path id="lamp" d="{lamp}" opacity="0"/></g></svg>'''
+<g id="all"><g id="play">{static}<path id="frame"/></g><g id="rest" style="display:none">{rest}</g><g id="dots">{dots}</g><path id="lamp" d="{lamp}" opacity="0"/></g></svg>'''
 js=r'''/*!
  * 巷伴 動態標準字 <xiangban-logo>
  * 用法：
@@ -37,13 +38,17 @@ function cb(x1,y1,x2,y2){return t=>{if(t<=0)return 0;if(t>=1)return 1;let lo=0,h
 const easeOut=cb(.16,1,.3,1), easeSoft=cb(.4,0,.3,1);
 function lampAt(t){const K=FLK;let o=0;if(t>=K[0][0]){o=K[K.length-1][1];for(let i=0;i<K.length-1;i++){if(t<K[i+1][0]){const u=(t-K[i][0])/(K[i+1][0]-K[i][0]);o=K[i][1]+(K[i+1][1]-K[i][1])*(i===K.length-2?easeOut(u):u);break;}}}return o*(1-easeSoft(clamp((t-FLOFF[0])/FLOFF[1])));}
 function popAt(t){const a=1.72,p=1.9,b=2.5;if(t<=a||t>=b)return 1;const u=t<p?easeOut((t-a)/(p-a)):1-easeSoft((t-p)/(b-p));return 1+.045*u;}
+function feetAt(t){const f=1.5,w=2*Math.PI*f;let A=9*easeSoft(clamp((t-.2)/.5));
+A*=1+.6*Math.sin(Math.PI*clamp((t-1.75)/1.1));            /* 握住時晃得更開心 */
+A*=1-easeSoft(clamp((t-3.0)/1.4));                        /* 收回後慢慢停下 */
+return [A*Math.sin(w*t), A*Math.sin(w*t+Math.PI*.8)];}
 class XiangbanLogo extends HTMLElement{
   connectedCallback(){
     if(this._init)return; this._init=true;
     const root=this.attachShadow({mode:'open'});
     root.innerHTML='<style>:host{display:inline-block;width:100%;max-width:1000px;line-height:0}svg{width:100%;height:auto;overflow:visible}path{fill:var(--xiangban-ink,#634F44)}#lamp{fill:url(#lampG)}</style>'+SVG;
     const q=s=>root.getElementById(s);
-    this._el={all:q('all'),play:q('play'),rest:q('rest'),frame:q('frame'),lamp:q('lamp')};
+    this._el={d1:q('dot1'),d2:q('dot2'),all:q('all'),play:q('play'),rest:q('rest'),frame:q('frame'),lamp:q('lamp')};
     const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(this.hasAttribute('static')||reduce){this._render(99);return;}
     this._render(0);
@@ -55,6 +60,7 @@ class XiangbanLogo extends HTMLElement{
   _render(t){
     const e=this._el;
     e.all.setAttribute('opacity',easeOut(clamp(t/FADE)));
+    const ft=feetAt(t); e.d1.setAttribute('transform',`rotate(${ft[0].toFixed(2)} 943 766)`); e.d2.setAttribute('transform',`rotate(${ft[1].toFixed(2)} 1220 775)`);
     const sc=popAt(t); e.all.setAttribute('transform',`translate(690 1035) scale(${sc}) translate(-690 -1035)`);
     const done=t>=END;
     e.play.style.display=done?'none':''; e.rest.style.display=done?'':'none';
