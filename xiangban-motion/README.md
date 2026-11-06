@@ -1,7 +1,9 @@
-# 巷伴 動態標準字 v8：依設計稿三個關鍵姿勢（逐格向量）
+# 巷伴 動態標準字（目前版本）
 
 打開 `index.html` 播放（純 SVG + JS，不需套件）。`rig.html` 是即時骨架版，用來調整動作與產生逐格輪廓。
-預覽檔：`xiangban-light/dark.mp4`、`xiangban-light/dark.gif`（5 秒）、`xiangban-hands-closeup.gif`（雙手特寫）。
+預覽檔：`xiangban-light/dark.mp4`（無聲）、`xiangban-light/dark-sound.mp4`（有聲）、`xiangban-light/dark.gif`（6 秒）、`xiangban-hands-closeup.gif`（雙手特寫）、`frames-contact-sheet.png`（逐格對照圖）。
+網頁嵌入：`embed/xiangban-logo.js`，範例 `embed/example.html`。
+專案現況摘要（給其他對話或協作者）：`HANDOFF.md`。
 
 ## 動作來源：設計者手繪的三張關鍵姿勢（`source/keyposes.jpg`）
 1. **收起**：巷的手是縮小版（0.6 倍），接在屋頂斜邊末端；伴的撇整條往上滑、變短；拐杖獨自立著。
