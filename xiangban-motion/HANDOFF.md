@@ -15,6 +15,7 @@
 | 有聲影片 | `xiangban-light-sound.mp4`、`xiangban-dark-sound.mp4` |
 | 無聲影片／GIF | `xiangban-light.mp4`、`xiangban-dark.mp4`、`xiangban-light.gif`、`xiangban-dark.gif`、`xiangban-hands-closeup.gif` |
 | 音效 | `sound/xiangban.wav`、`sound/xiangban.mp3` |
+| 透明背景 GIF（簡報用） | `transparent/xiangban-light-transparent-loop.gif`（咖啡色字，淺色投影片）、`transparent/xiangban-dark-transparent-loop.gif`（白字，深色投影片）；`-once` 版本只播一次 |
 | 逐格對照圖 | `frames-contact-sheet.png`（回饋時可用格數指出位置） |
 
 ## 設計概念

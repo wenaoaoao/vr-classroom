@@ -2,6 +2,7 @@
 
 打開 `index.html` 播放（純 SVG + JS，不需套件）。`rig.html` 是即時骨架版，用來調整動作與產生逐格輪廓。
 預覽檔：`xiangban-light/dark.mp4`（無聲）、`xiangban-light/dark-sound.mp4`（有聲）、`xiangban-light/dark.gif`（6 秒）、`xiangban-hands-closeup.gif`（雙手特寫）、`frames-contact-sheet.png`（逐格對照圖）。
+透明背景 GIF（簡報用）：`transparent/` 資料夾，淺色投影片用 `light`、深色用 `dark`，`loop` 循環、`once` 只播一次。
 網頁嵌入：`embed/xiangban-logo.js`，範例 `embed/example.html`。
 專案現況摘要（給其他對話或協作者）：`HANDOFF.md`。
 
