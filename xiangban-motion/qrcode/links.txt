@@ -1,0 +1,2 @@
+白底影片：https://cdn.jsdelivr.net/gh/wenaoaoao/vr-classroom@cd1ed46489ba2338e3bee2cd6bf6dcfd729fd019/xiangban-motion/xiangban-light-sound.mp4
+黑底影片：https://cdn.jsdelivr.net/gh/wenaoaoao/vr-classroom@cd1ed46489ba2338e3bee2cd6bf6dcfd729fd019/xiangban-motion/xiangban-dark-sound.mp4
