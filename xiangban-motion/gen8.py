@@ -12,12 +12,12 @@ html=f'''<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>巷伴 動態標準字</title>
 <style>
-  :root{{--ink:#634F44;--bg:#FFFFFF;--lampIn:#FFF1D2;--lampOut:#F2CB86}}
-  body.dark{{--ink:#FFFFFF;--bg:#000000;--lampIn:#FFE7B0;--lampOut:#F0B04F}}
+  :root{{--fill:#EEBD60;--line:#5D4D41;--ink:#5D4D41;--bg:#FFFFFF;--lampIn:#FFF6E2;--lampOut:#F7DFA8}}
+  body.dark{{--ink:#EEBD60;--bg:#000000}}
   html,body{{margin:0;height:100%;background:var(--bg);transition:background .5s;font-family:system-ui,"PingFang TC","Noto Sans TC",sans-serif}}
   .stage{{height:100%;display:flex;align-items:center;justify-content:center;padding:0 6vw;box-sizing:border-box}}
   svg{{width:100%;max-width:1000px;max-height:80vh;height:auto;overflow:visible}}
-  #logo path{{fill:var(--ink);transition:fill .5s}}
+  #logo path{{fill:#000}}
   #logo #lamp{{fill:url(#lampG)}}
   .ui{{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:flex;gap:10px}}
   .ui button{{border:1px solid currentColor;background:transparent;color:var(--ink);padding:8px 16px;border-radius:999px;font-size:13px;letter-spacing:.05em;cursor:pointer;opacity:.6}}
@@ -30,13 +30,16 @@ html=f'''<!DOCTYPE html>
 <svg id="logo" viewBox="40 700 1300 670" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="巷伴">
   <defs>
     <clipPath id="outsideQ" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="{clip}"/></clipPath>
+    <filter id="outline" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB"><feMorphology in="SourceAlpha" operator="dilate" radius="2.7" result="o"/><feFlood style="flood-color:var(--line)" result="lc"/><feComposite in="lc" in2="o" operator="in" result="ln"/><feMorphology in="SourceAlpha" operator="erode" radius="2.7" result="i"/><feFlood style="flood-color:var(--fill)" result="fc"/><feComposite in="fc" in2="i" operator="in" result="fl"/><feMerge><feMergeNode in="ln"/><feMergeNode in="fl"/></feMerge></filter>
     <radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--lampIn)"/><stop offset="1" stop-color="var(--lampOut)"/></radialGradient>
   </defs>
   <g id="all">
+    <path id="lamp" d="{L['window']}" opacity="0"/>
+    <g id="glyphs" filter="url(#outline)">
     <g id="play">{static}<path id="frame"/></g>
     <g id="rest" style="display:none">{rest}</g>
     <g id="dots"><path id="dot1" d="{L['dot1']}"/><path id="dot2" d="{L['dot2']}"/></g>
-    <path id="lamp" d="{L['window']}" opacity="0"/>
+    </g>
   </g>
 </svg>
 </div>

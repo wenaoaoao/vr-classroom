@@ -15,9 +15,16 @@
 | 有聲影片 | `xiangban-light-sound.mp4`、`xiangban-dark-sound.mp4` |
 | 無聲影片／GIF | `xiangban-light.mp4`、`xiangban-dark.mp4`、`xiangban-light.gif`、`xiangban-dark.gif`、`xiangban-hands-closeup.gif` |
 | 音效 | `sound/xiangban.wav`、`sound/xiangban.mp3` |
-| 透明背景 GIF（簡報用） | `transparent/xiangban-light-transparent-loop.gif`（咖啡色字，淺色投影片）、`transparent/xiangban-dark-transparent-loop.gif`（白字，深色投影片）；`-once` 版本只播一次 |
+| 透明背景 GIF（簡報用） | `transparent/xiangban-light-transparent-loop.gif`（放淺色投影片）、`transparent/xiangban-dark-transparent-loop.gif`（放深色投影片），兩者字色相同，只有邊緣混色不同；`-once` 版本只播一次 |
 | 影片 QR code | `qrcode/`：掃描後在手機瀏覽器直接播放有聲影片；連結見 `qrcode/links.txt`（固定指向 commit cd1ed46 的影片，之後改動不會影響） |
 | 逐格對照圖 | `frames-contact-sheet.png`（回饋時可用格數指出位置） |
+
+## 標準字色彩（最終版）
+- 填色：黃 `#EEBD60`
+- 外框：深咖啡 `#5D4D41`，約 5.4 單位寬（原稿座標），沿字形邊緣置中
+- 外框畫在整個字形（含移動中的手）的外輪廓上，零件接縫處不會出現線條（SVG filter `#outline`）
+- 窗燈：奶油白 `#FFF6E2` → `#F7DFA8`
+- 原始色稿：`source/final-colors.webp`、`source/final-logo.webp`
 
 ## 設計概念
 專案：給社區「媒合者」使用的青銀互助工具組；理念「長者不只是被照顧，而是還被需要」。

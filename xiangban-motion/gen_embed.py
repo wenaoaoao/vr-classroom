@@ -8,8 +8,8 @@ dots=re.search(r'<g id="dots">(.*?)</g>',h,re.S).group(1)
 lamp=re.search(r'<path id="lamp" d="([^"]+)"',h).group(1)
 frames=json.loads(re.search(r'const FR=(\[.*?\]);',h,re.S).group(1))
 svg=f'''<svg viewBox="40 700 1300 670" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="巷伴" part="svg">
-<defs><radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--xiangban-lamp-in,#FFF1D2)"/><stop offset="1" stop-color="var(--xiangban-lamp-out,#F2CB86)"/></radialGradient></defs>
-<g id="all"><g id="play">{static}<path id="frame"/></g><g id="rest" style="display:none">{rest}</g><g id="dots">{dots}</g><path id="lamp" d="{lamp}" opacity="0"/></g></svg>'''
+<defs><filter id="outline" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB"><feMorphology in="SourceAlpha" operator="dilate" radius="2.7" result="o"/><feFlood style="flood-color:var(--xiangban-line,#5D4D41)" result="lc"/><feComposite in="lc" in2="o" operator="in" result="ln"/><feMorphology in="SourceAlpha" operator="erode" radius="2.7" result="i"/><feFlood style="flood-color:var(--xiangban-fill,#EEBD60)" result="fc"/><feComposite in="fc" in2="i" operator="in" result="fl"/><feMerge><feMergeNode in="ln"/><feMergeNode in="fl"/></feMerge></filter><radialGradient id="lampG" cx="45%" cy="40%" r="75%"><stop offset="0" stop-color="var(--xiangban-lamp-in,#FFF6E2)"/><stop offset="1" stop-color="var(--xiangban-lamp-out,#F7DFA8)"/></radialGradient></defs>
+<g id="all"><path id="lamp" d="{lamp}" opacity="0"/><g id="glyphs" filter="url(#outline)"><g id="play">{static}<path id="frame"/></g><g id="rest" style="display:none">{rest}</g><g id="dots">{dots}</g></g></g></svg>'''
 js=r'''/*!
  * 巷伴 動態標準字 <xiangban-logo>
  * 用法：
@@ -21,9 +21,10 @@ js=r'''/*!
  *   static             不播放動畫，直接顯示完成的標準字
  *   sound              播放音效（瀏覽器規定：訪客點過頁面後才能出聲；還沒點過時動畫照常、靜音播放）
  * 顏色（CSS 變數，可寫在任何外層元素上）：
- *   --xiangban-ink: #634F44;        字色
- *   --xiangban-lamp-in: #FFF1D2;    窗燈中心
- *   --xiangban-lamp-out: #F2CB86;   窗燈外圈
+ *   --xiangban-fill: #EEBD60;       字的填色（標準色：黃）
+ *   --xiangban-line: #5D4D41;       字的外框（標準色：深咖啡）
+ *   --xiangban-lamp-in: #FFF6E2;    窗燈中心
+ *   --xiangban-lamp-out: #F7DFA8;   窗燈外圈
  * JavaScript：document.querySelector('xiangban-logo').play()  重新播放
  * 使用者在系統中開啟「減少動態效果」時，會直接顯示完成的標準字。
  */
@@ -43,7 +44,7 @@ class XiangbanLogo extends HTMLElement{
   connectedCallback(){
     if(this._init)return; this._init=true;
     const root=this.attachShadow({mode:'open'});
-    root.innerHTML='<style>:host{display:inline-block;width:100%;max-width:1000px;line-height:0}svg{width:100%;height:auto;overflow:visible}path{fill:var(--xiangban-ink,#634F44)}#lamp{fill:url(#lampG)}</style>'+SVG;
+    root.innerHTML='<style>:host{display:inline-block;width:100%;max-width:1000px;line-height:0}svg{width:100%;height:auto;overflow:visible}path{fill:#000}#lamp{fill:url(#lampG)}</style>'+SVG;
     const q=s=>root.getElementById(s);
     this._el={d1:q('dot1'),d2:q('dot2'),all:q('all'),play:q('play'),rest:q('rest'),frame:q('frame'),lamp:q('lamp')};
     const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
