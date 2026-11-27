@@ -16,7 +16,7 @@
 | 無聲影片／GIF | `xiangban-light.mp4`、`xiangban-dark.mp4`、`xiangban-light.gif`、`xiangban-dark.gif`、`xiangban-hands-closeup.gif` |
 | 音效 | `sound/xiangban.wav`、`sound/xiangban.mp3` |
 | 透明背景 GIF（簡報用） | `transparent/xiangban-light-transparent-loop.gif`（放淺色投影片）、`transparent/xiangban-dark-transparent-loop.gif`（放深色投影片），兩者字色相同，只有邊緣混色不同；`-once` 版本只播一次 |
-| 影片 QR code | `qrcode/`：掃描後在手機瀏覽器直接播放有聲影片；連結見 `qrcode/links.txt`（固定指向 commit cd1ed46 的影片，之後改動不會影響） |
+| 影片 QR code | `qrcode/`：掃描後在手機瀏覽器直接播放有聲影片；連結見 `qrcode/links.txt`（固定指向 commit 3935d3b 的影片（最終色版），之後改動不會影響） |
 | 逐格對照圖 | `frames-contact-sheet.png`（回饋時可用格數指出位置） |
 
 ## 標準字色彩（最終版）
